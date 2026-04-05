@@ -22,13 +22,12 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 app = FastAPI(title="ProHeat Sports Backend")
 
+print("🚀 Backend ProHeat v2 activo")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://proheatsports.com",
-        "https://www.proheatsports.com",
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
+        "https://www.proheatsports.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
