@@ -17,7 +17,6 @@ DB_NAME = BASE_DIR / "proheat.db"
 UPLOADS_DIR = BASE_DIR / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
 
-# ⚠️ REEMPLAZA ESTOS VALORES
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -25,7 +24,12 @@ app = FastAPI(title="ProHeat Sports Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://proheatsports.com",
+        "https://www.proheatsports.com",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
