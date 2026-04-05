@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import shutil
 import requests
+import os
 
 # =========================================================
 # CONFIGURACIÓN
