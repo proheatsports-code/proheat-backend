@@ -25,11 +25,8 @@ app = FastAPI(title="ProHeat Sports Backend")
 print("🚀 Backend ProHeat v2 activo")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://proheatsports.com",
-        "https://www.proheatsports.com"
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # 🔥 ABIERTO PARA PRUEBA
+    allow_credentials=False,  # ⚠️ IMPORTANTE cuando usas "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
