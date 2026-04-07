@@ -23,10 +23,16 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 app = FastAPI(title="ProHeat Sports Backend")
 
 print("🚀 Backend ProHeat v2 activo")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 🔥 ABIERTO
-    allow_credentials=False,
+    allow_origins=[
+        "https://proheatsports.com",
+        "https://www.proheatsports.com",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -49,22 +55,84 @@ class AdminNote(BaseModel):
 class ExtendMembershipRequest(BaseModel):
     days: int = 30
 
+
 # =========================================================
-# FUNCIONES AUXILIARES
+# DB
 # =========================================================
 def get_db():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
+
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'none',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_login TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS memberships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            plan_name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS payment_proofs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            file_path TEXT NOT NULL,
+            submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            status TEXT NOT NULL DEFAULT 'submitted',
+            admin_note TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS admin_actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            admin_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            action TEXT NOT NULL,
+            details TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+init_db()
+
+
+# =========================================================
+# FUNCIONES AUXILIARES
+# =========================================================
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
+
 def send_telegram_message(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-
-    if TELEGRAM_TOKEN == "AQUI_TU_TOKEN_DE_BOT" or TELEGRAM_CHAT_ID == "AQUI_TU_CHAT_ID":
         return
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -80,15 +148,12 @@ def send_telegram_message(message: str):
     except Exception as e:
         print(f"[WARN] No se pudo enviar mensaje a Telegram: {e}")
 
+
 def send_telegram_document(file_path: str, caption: str = ""):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         return
 
-    if TELEGRAM_TOKEN == "AQUI_TU_TOKEN_DE_BOT" or TELEGRAM_CHAT_ID == "AQUI_TU_CHAT_ID":
-        return
-
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument"
-
     try:
         with open(file_path, "rb") as f:
             requests.post(
@@ -105,6 +170,7 @@ def send_telegram_document(file_path: str, caption: str = ""):
     except Exception as e:
         print(f"[WARN] No se pudo enviar archivo a Telegram: {e}")
 
+
 def user_exists(user_id: int) -> bool:
     conn = get_db()
     cursor = conn.cursor()
@@ -112,6 +178,7 @@ def user_exists(user_id: int) -> bool:
     result = cursor.fetchone()
     conn.close()
     return result is not None
+
 
 def log_admin_action(admin_id: int, user_id: int, action: str, details: str = ""):
     conn = get_db()
@@ -122,6 +189,7 @@ def log_admin_action(admin_id: int, user_id: int, action: str, details: str = ""
     """, (admin_id, user_id, action, details))
     conn.commit()
     conn.close()
+
 
 def get_latest_membership(user_id: int):
     conn = get_db()
@@ -136,6 +204,7 @@ def get_latest_membership(user_id: int):
     result = cursor.fetchone()
     conn.close()
     return result
+
 
 def expire_membership_if_needed(user_id: int):
     membership = get_latest_membership(user_id)
@@ -172,6 +241,7 @@ def expire_membership_if_needed(user_id: int):
         conn.commit()
         conn.close()
 
+
 def create_or_replace_membership(user_id: int, days: int = 30, plan_name: str = "premium_mensual"):
     start_dt = datetime.now()
     end_dt = start_dt + timedelta(days=days)
@@ -203,12 +273,14 @@ def create_or_replace_membership(user_id: int, days: int = 30, plan_name: str = 
         "end_date": end_dt.isoformat(timespec="seconds")
     }
 
+
 # =========================================================
 # ENDPOINTS BÁSICOS
 # =========================================================
 @app.get("/")
 def root():
     return {"message": "ProHeat backend activo"}
+
 
 @app.get("/debug/db")
 def debug_db():
@@ -226,6 +298,7 @@ def debug_db():
         "tables": tables
     }
 
+
 # =========================================================
 # REGISTRO
 # =========================================================
@@ -238,9 +311,13 @@ def register(user: UserRegister):
 
     try:
         cursor.execute("""
-            INSERT INTO users (name, email, password_hash)
-            VALUES (?, ?, ?)
-        """, (user.name.strip(), user.email.strip().lower(), password_hash))
+            INSERT INTO users (name, email, password_hash, status)
+            VALUES (?, ?, ?, 'none')
+        """, (
+            user.name.strip(),
+            user.email.strip().lower(),
+            password_hash
+        ))
 
         conn.commit()
         new_user_id = cursor.lastrowid
@@ -250,7 +327,7 @@ def register(user: UserRegister):
             f"ID: {new_user_id}\n"
             f"Nombre: {user.name.strip()}\n"
             f"Correo: {user.email.strip().lower()}\n"
-            f"Estado: pending"
+            f"Estado: none"
         )
 
         return {
@@ -262,6 +339,7 @@ def register(user: UserRegister):
         raise HTTPException(status_code=400, detail="El correo ya existe")
     finally:
         conn.close()
+
 
 # =========================================================
 # LOGIN
@@ -300,6 +378,7 @@ def login(user: UserLogin):
         SET last_login = CURRENT_TIMESTAMP
         WHERE id = ?
     """, (user_id,))
+
     conn.commit()
     conn.close()
 
@@ -310,6 +389,7 @@ def login(user: UserLogin):
         "status": updated_user["status"]
     }
 
+
 # =========================================================
 # ESTADO MEMBRESÍA
 # =========================================================
@@ -319,17 +399,18 @@ def membership(user_id: int):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     expire_membership_if_needed(user_id)
-    membership = get_latest_membership(user_id)
+    current_membership = get_latest_membership(user_id)
 
-    if not membership:
+    if not current_membership:
         return {"membership": "none"}
 
     return {
-        "membership": membership["status"],
-        "plan_name": membership["plan_name"],
-        "start_date": membership["start_date"],
-        "end_date": membership["end_date"]
+        "membership": current_membership["status"],
+        "plan_name": current_membership["plan_name"],
+        "start_date": current_membership["start_date"],
+        "end_date": current_membership["end_date"]
     }
+
 
 # =========================================================
 # SUBIR COMPROBANTE
@@ -340,7 +421,8 @@ async def upload_proof(user_id: int, file: UploadFile = File(...)):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_name = f"user_{user_id}_{timestamp}_{file.filename}"
+    original_name = Path(file.filename).name
+    safe_name = f"user_{user_id}_{timestamp}_{original_name}"
     file_path = UPLOADS_DIR / safe_name
 
     with open(file_path, "wb") as buffer:
@@ -387,6 +469,7 @@ async def upload_proof(user_id: int, file: UploadFile = File(...)):
         "file_path": str(file_path)
     }
 
+
 # =========================================================
 # VER COMPROBANTES
 # =========================================================
@@ -407,6 +490,7 @@ def list_payment_proofs():
     conn.close()
 
     return results
+
 
 # =========================================================
 # APROBAR USUARIO
@@ -444,6 +528,7 @@ def approve_user(user_id: int):
         "membership_start": membership_data["start_date"],
         "membership_end": membership_data["end_date"]
     }
+
 
 # =========================================================
 # RECHAZAR USUARIO
@@ -484,6 +569,7 @@ def reject_user(user_id: int, payload: AdminNote | None = None):
 
     return {"message": "Usuario rechazado correctamente"}
 
+
 # =========================================================
 # SUSPENDER USUARIO
 # =========================================================
@@ -522,6 +608,7 @@ def suspend_user(user_id: int, payload: AdminNote | None = None):
 
     return {"message": "Usuario suspendido correctamente"}
 
+
 # =========================================================
 # ELIMINAR USUARIO (LÓGICO)
 # =========================================================
@@ -559,6 +646,7 @@ def delete_user(user_id: int, payload: AdminNote | None = None):
     )
 
     return {"message": "Usuario eliminado correctamente"}
+
 
 # =========================================================
 # EXTENDER MEMBRESÍA
@@ -612,7 +700,12 @@ def extend_membership(user_id: int, payload: ExtendMembershipRequest):
     conn.commit()
     conn.close()
 
-    log_admin_action(admin_id=1, user_id=user_id, action="extend_membership", details=f"Extendida {payload.days} días")
+    log_admin_action(
+        admin_id=1,
+        user_id=user_id,
+        action="extend_membership",
+        details=f"Extendida {payload.days} días hasta {new_end.isoformat(timespec='seconds')}"
+    )
 
     send_telegram_message(
         f"📅 Membresía extendida\n"
@@ -625,29 +718,3 @@ def extend_membership(user_id: int, payload: ExtendMembershipRequest):
         "message": "Membresía extendida correctamente",
         "new_end_date": new_end.isoformat(timespec="seconds")
     }
-
-# =========================================================
-# LISTAR USUARIOS
-# =========================================================
-@app.get("/users")
-def list_users():
-    conn = get_db()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT id, name, email, role, status, created_at, last_login
-        FROM users
-        ORDER BY id DESC
-    """)
-
-    results = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-
-    return results
-# =========================================================
-# TEST TELEGRAM
-# =========================================================
-@app.get("/test-telegram")
-def test_telegram():
-    send_telegram_message("✅ Prueba de Telegram desde ProHeat Sports")
-    return {"message": "Mensaje de prueba enviado"}
