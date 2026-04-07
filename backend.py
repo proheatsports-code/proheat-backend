@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 import shutil
 import requests
 import os
+import json
+from typing import Any
 
 # =========================================================
 # CONFIGURACIÓN
@@ -16,6 +18,13 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_NAME = BASE_DIR / "proheat.db"
 UPLOADS_DIR = BASE_DIR / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
+
+PROHEAT_DATA_DIR = BASE_DIR / "proheat_data"
+PROHEAT_HISTORY_DIR = PROHEAT_DATA_DIR / "history"
+PROHEAT_LATEST_JSON = PROHEAT_DATA_DIR / "latest.json"
+
+PROHEAT_DATA_DIR.mkdir(exist_ok=True)
+PROHEAT_HISTORY_DIR.mkdir(exist_ok=True)
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -31,6 +40,8 @@ app.add_middleware(
         "https://www.proheatsports.com",
         "http://localhost:5500",
         "http://127.0.0.1:5500",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -275,6 +286,81 @@ def create_or_replace_membership(user_id: int, days: int = 30, plan_name: str = 
 
 
 # =========================================================
+# FUNCIONES DATOS PROHEAT
+# =========================================================
+def load_latest_predictions() -> dict[str, Any]:
+    if not PROHEAT_LATEST_JSON.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontró latest.json en proheat_data"
+        )
+
+    try:
+        with open(PROHEAT_LATEST_JSON, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=500,
+            detail="latest.json está corrupto o no es JSON válido"
+        )
+
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=500,
+            detail="latest.json no tiene el formato esperado"
+        )
+
+    return data
+
+
+def get_prediction_section(section: str) -> list[dict[str, Any]]:
+    data = load_latest_predictions()
+
+    if section not in data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No existe la sección '{section}' en latest.json"
+        )
+
+    section_data = data[section]
+
+    if not isinstance(section_data, list):
+        raise HTTPException(
+            status_code=500,
+            detail=f"La sección '{section}' no tiene formato de lista"
+        )
+
+    return section_data
+
+
+def load_history_by_date(date_str: str) -> dict[str, Any]:
+    file_path = PROHEAT_HISTORY_DIR / f"predictions_{date_str}.json"
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"No existe histórico para la fecha {date_str}"
+        )
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=500,
+            detail=f"El archivo histórico {file_path.name} no es JSON válido"
+        )
+
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=500,
+            detail=f"El histórico {file_path.name} no tiene el formato esperado"
+        )
+
+    return data
+
+
+# =========================================================
 # ENDPOINTS BÁSICOS
 # =========================================================
 @app.get("/")
@@ -296,6 +382,16 @@ def debug_db():
         "db_path": str(DB_NAME),
         "db_exists": DB_NAME.exists(),
         "tables": tables
+    }
+
+
+@app.get("/debug/data")
+def debug_data():
+    return {
+        "data_dir": str(PROHEAT_DATA_DIR),
+        "history_dir": str(PROHEAT_HISTORY_DIR),
+        "latest_json": str(PROHEAT_LATEST_JSON),
+        "latest_exists": PROHEAT_LATEST_JSON.exists()
     }
 
 
@@ -391,7 +487,7 @@ def login(user: UserLogin):
 
 
 # =========================================================
-# ESTADO MEMBRESÍA
+# MEMBRESÍA
 # =========================================================
 @app.get("/membership/{user_id}")
 def membership(user_id: int):
@@ -471,7 +567,7 @@ async def upload_proof(user_id: int, file: UploadFile = File(...)):
 
 
 # =========================================================
-# VER COMPROBANTES
+# LISTAR COMPROBANTES
 # =========================================================
 @app.get("/payment-proofs")
 def list_payment_proofs():
@@ -493,7 +589,7 @@ def list_payment_proofs():
 
 
 # =========================================================
-# APROBAR USUARIO
+# APROBAR
 # =========================================================
 @app.post("/approve/{user_id}")
 def approve_user(user_id: int):
@@ -531,7 +627,7 @@ def approve_user(user_id: int):
 
 
 # =========================================================
-# RECHAZAR USUARIO
+# RECHAZAR
 # =========================================================
 @app.post("/reject/{user_id}")
 def reject_user(user_id: int, payload: AdminNote | None = None):
@@ -571,7 +667,7 @@ def reject_user(user_id: int, payload: AdminNote | None = None):
 
 
 # =========================================================
-# SUSPENDER USUARIO
+# SUSPENDER
 # =========================================================
 @app.post("/suspend/{user_id}")
 def suspend_user(user_id: int, payload: AdminNote | None = None):
@@ -610,7 +706,7 @@ def suspend_user(user_id: int, payload: AdminNote | None = None):
 
 
 # =========================================================
-# ELIMINAR USUARIO (LÓGICO)
+# ELIMINAR
 # =========================================================
 @app.post("/delete/{user_id}")
 def delete_user(user_id: int, payload: AdminNote | None = None):
@@ -718,3 +814,96 @@ def extend_membership(user_id: int, payload: ExtendMembershipRequest):
         "message": "Membresía extendida correctamente",
         "new_end_date": new_end.isoformat(timespec="seconds")
     }
+
+
+# =========================================================
+# API DE DATOS PROHEAT
+# =========================================================
+@app.get("/api/data")
+def api_data_root():
+    data = load_latest_predictions()
+    return {
+        "message": "API de datos ProHeat activa",
+        "date": data.get("date"),
+        "source_file": data.get("source_file"),
+        "generated_at": data.get("generated_at"),
+        "sections": [
+            key for key, value in data.items()
+            if isinstance(value, list)
+        ]
+    }
+
+
+@app.get("/api/data/summary")
+def api_data_summary():
+    data = load_latest_predictions()
+
+    summary = {}
+    for key, value in data.items():
+        if isinstance(value, list):
+            summary[key] = len(value)
+
+    return {
+        "date": data.get("date"),
+        "source_file": data.get("source_file"),
+        "generated_at": data.get("generated_at"),
+        "summary": summary
+    }
+
+
+@app.get("/api/data/public")
+def api_data_public():
+    rows = get_prediction_section("public")
+    return {"count": len(rows), "items": rows}
+
+
+@app.get("/api/data/general")
+def api_data_general():
+    rows = get_prediction_section("general")
+    return {"count": len(rows), "items": rows}
+
+
+@app.get("/api/data/ultra")
+def api_data_ultra():
+    rows = get_prediction_section("ultra")
+    return {"count": len(rows), "items": rows}
+
+
+@app.get("/api/data/stakes")
+def api_data_stakes():
+    rows = get_prediction_section("stakes")
+    return {"count": len(rows), "items": rows}
+
+
+@app.get("/api/data/combinadas")
+def api_data_combinadas():
+    rows = get_prediction_section("combinadas")
+    return {"count": len(rows), "items": rows}
+
+
+@app.get("/api/data/goles")
+def api_data_goles():
+    rows = get_prediction_section("goles")
+    return {"count": len(rows), "items": rows}
+
+
+@app.get("/api/data/top")
+def api_data_top():
+    rows = get_prediction_section("top")
+    return {"count": len(rows), "items": rows}
+
+
+@app.get("/api/data/alta-confianza")
+def api_data_alta_confianza():
+    rows = get_prediction_section("alta_confianza")
+    return {"count": len(rows), "items": rows}
+
+
+@app.get("/api/data/history/{date_str}")
+def api_data_history(date_str: str):
+    """
+    Ejemplo:
+    /api/data/history/2026-03-30
+    """
+    data = load_history_by_date(date_str)
+    return data
