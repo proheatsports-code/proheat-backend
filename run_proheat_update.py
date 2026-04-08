@@ -36,7 +36,7 @@ def main():
         raise FileNotFoundError(f"No existe el script diario: {daily_script}")
 
     # 1) Generar latest.json e histórico
-    run(["python", str(daily_script)], cwd=str(futbol_dir))
+    run(["python", str(daily_script), str(excel_file)], cwd=str(futbol_dir))
 
     if not source_latest.exists():
         raise FileNotFoundError(f"No se generó latest.json en: {source_latest}")
