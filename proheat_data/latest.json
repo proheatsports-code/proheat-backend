@@ -1,0 +1,433 @@
+{
+  "general": [
+    {
+      "hora": "00:00",
+      "liga": "FIFA Series",
+      "partido": "Nueva Zelanda vs Chile",
+      "ml_prob": "Chile o Empate (72%)",
+      "goles_local": "Goles Local -1.5 (75%)",
+      "goles_visitante": "Goles Visitante +1.5 (70%)",
+      "sot": "SoT -9.5 (62%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +4.5 (65%)"
+    },
+    {
+      "hora": "02:30",
+      "liga": "FIFA Series",
+      "partido": "St. Kitts vs Islas Salomón",
+      "ml_prob": "St. Kitts o Empate (66%)",
+      "goles_local": "Goles Local +1.5 (68%)",
+      "goles_visitante": "Goles Visitante -1.5 (70%)",
+      "sot": "SoT -8.5 (61%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +3.5 (64%)"
+    },
+    {
+      "hora": "04:00",
+      "liga": "FIFA Series",
+      "partido": "Trinidad y Tobago vs Gabón",
+      "ml_prob": "Gabón o Empate (64%)",
+      "goles_local": "Goles Local -1.5 (69%)",
+      "goles_visitante": "Goles Visitante +1.5 (66%)",
+      "sot": "SoT -9.5 (62%)",
+      "corners": "Corners -9.5 (61%)",
+      "tarjetas": "Tarjetas +4.5 (66%)"
+    },
+    {
+      "hora": "07:00",
+      "liga": "FIFA Series",
+      "partido": "Indonesia vs Bulgaria",
+      "ml_prob": "Bulgaria o Empate (63%)",
+      "goles_local": "Goles Local -1.5 (68%)",
+      "goles_visitante": "Goles Visitante +1.5 (65%)",
+      "sot": "SoT -9.5 (60%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +4.5 (65%)"
+    },
+    {
+      "hora": "08:00",
+      "liga": "FIFA Series",
+      "partido": "Uzbekistán vs Venezuela",
+      "ml_prob": "Venezuela o Empate (61%)",
+      "goles_local": "Goles Local +1.5 (65%)",
+      "goles_visitante": "Goles Visitante +1.5 (66%)",
+      "sot": "SoT -9.5 (60%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +4.5 (66%)"
+    },
+    {
+      "hora": "08:00",
+      "liga": "FIFA Series",
+      "partido": "Granada vs Kenia",
+      "ml_prob": "Kenia Gana (74%)",
+      "goles_local": "Goles Local -1.5 (78%)",
+      "goles_visitante": "Goles Visitante +1.5 (72%)",
+      "sot": "SoT -8.5 (60%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +3.5 (63%)"
+    },
+    {
+      "hora": "09:00",
+      "liga": "FIFA Series",
+      "partido": "Azerbaiyán vs Sierra Leona",
+      "ml_prob": "Azerbaiyán o Empate (65%)",
+      "goles_local": "Goles Local +1.5 (68%)",
+      "goles_visitante": "Goles Visitante -1.5 (70%)",
+      "sot": "SoT -8.5 (61%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +4.5 (65%)"
+    },
+    {
+      "hora": "11:30",
+      "liga": "FIFA Series",
+      "partido": "Ruanda vs Estonia",
+      "ml_prob": "Ruanda o Empate (60%)",
+      "goles_local": "Goles Local +1.5 (66%)",
+      "goles_visitante": "Goles Visitante -1.5 (68%)",
+      "sot": "SoT -8.5 (60%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +4.5 (65%)"
+    },
+    {
+      "hora": "12:00",
+      "liga": "Uruguay",
+      "partido": "Juventud vs Boston River",
+      "ml_prob": "Juventud o Empate (61%)",
+      "goles_local": "Goles Local +0.5 (70%)",
+      "goles_visitante": "Goles Visitante +0.5 (68%)",
+      "sot": "SoT -8.5 (63%)",
+      "corners": "Corners -9.5 (62%)",
+      "tarjetas": "Tarjetas +4.5 (72%)"
+    },
+    {
+      "hora": "14:55",
+      "liga": "Uruguay",
+      "partido": "Cerro Largo vs Danubio",
+      "ml_prob": "Danubio o Empate (62%)",
+      "goles_local": "Goles Local -1.5 (70%)",
+      "goles_visitante": "Goles Visitante +1.5 (65%)",
+      "sot": "SoT -8.5 (62%)",
+      "corners": "Corners -9.5 (61%)",
+      "tarjetas": "Tarjetas +4.5 (71%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Uruguay",
+      "partido": "Defensor vs Albion",
+      "ml_prob": "Defensor o Empate (64%)",
+      "goles_local": "Goles Local +1.5 (68%)",
+      "goles_visitante": "Goles Visitante -1.5 (70%)",
+      "sot": "SoT -8.5 (62%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +4.5 (71%)"
+    },
+    {
+      "hora": "17:10",
+      "liga": "Colombia",
+      "partido": "Medellín vs América Cali",
+      "ml_prob": "América o Empate (63%)",
+      "goles_local": "Goles Local -1.5 (68%)",
+      "goles_visitante": "Goles Visitante +1.5 (65%)",
+      "sot": "SoT -8.5 (61%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +4.5 (70%)"
+    },
+    {
+      "hora": "17:55",
+      "liga": "Uruguay",
+      "partido": "Central Español vs Maldonado",
+      "ml_prob": "Maldonado o Empate (65%)",
+      "goles_local": "Goles Local -1.5 (70%)",
+      "goles_visitante": "Goles Visitante +1.5 (66%)",
+      "sot": "SoT -8.5 (62%)",
+      "corners": "Corners -9.5 (61%)",
+      "tarjetas": "Tarjetas +4.5 (71%)"
+    },
+    {
+      "hora": "18:15",
+      "liga": "Copa Argentina",
+      "partido": "Unión Santa Fe vs Agropecuario",
+      "ml_prob": "Unión Gana (74%)",
+      "goles_local": "Goles Local +1.5 (70%)",
+      "goles_visitante": "Goles Visitante -1.5 (72%)",
+      "sot": "SoT +8.5 (66%)",
+      "corners": "Corners +8.5 (63%)",
+      "tarjetas": "Tarjetas +4.5 (67%)"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "partido": "Millonarios vs Fortaleza",
+      "ml_prob": "Millonarios Gana (76%)",
+      "goles_local": "Goles Local +1.5 (72%)",
+      "goles_visitante": "Goles Visitante -1.5 (74%)",
+      "sot": "SoT +9.5 (68%)",
+      "corners": "Corners -9.5 (60%)",
+      "tarjetas": "Tarjetas +4.5 (70%)"
+    }
+  ],
+  "ultra": [
+    {
+      "hora": "00:00",
+      "liga": "FIFA Series",
+      "partido": "Nueva Zelanda vs Chile",
+      "pick": "Chile o Empate (72%)"
+    },
+    {
+      "hora": "08:00",
+      "liga": "FIFA Series",
+      "partido": "Kenia vs Granada",
+      "pick": "Kenia Gana (74%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Uruguay",
+      "partido": "Defensor vs Albion",
+      "pick": "Defensor o Empate (64%)"
+    },
+    {
+      "hora": "18:15",
+      "liga": "Copa Argentina",
+      "partido": "Unión vs Agropecuario",
+      "pick": "Unión Gana (74%)"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "partido": "Millonarios vs Fortaleza",
+      "pick": "Millonarios Gana (76%)"
+    }
+  ],
+  "stakes": [
+    {
+      "hora": "00:00",
+      "liga": "FIFA Series",
+      "partido": "Chile vs NZ",
+      "pick": "Chile o Empate",
+      "stake": "🔵🔵"
+    },
+    {
+      "hora": "08:00",
+      "liga": "FIFA Series",
+      "partido": "Kenia vs Granada",
+      "pick": "Kenia ML",
+      "stake": "🔵🔵🔵"
+    },
+    {
+      "hora": "18:15",
+      "liga": "Copa Argentina",
+      "partido": "Unión vs Agropecuario",
+      "pick": "Unión ML",
+      "stake": "🔵🔵🔵"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "partido": "Millonarios vs Fortaleza",
+      "pick": "Millonarios ML",
+      "stake": "🔵🔵🔵🔵"
+    }
+  ],
+  "combinadas": [
+    {
+      "hora": "00:00",
+      "liga": "FIFA Series",
+      "combinada": "Nueva Zelanda vs Chile",
+      "probabilidad": "Goles +1.5 (70%)"
+    },
+    {
+      "hora": "00:00",
+      "liga": "FIFA Series",
+      "combinada": "Chile vs NZ",
+      "probabilidad": "Chile o Empate (72%)"
+    },
+    {
+      "hora": "04:00",
+      "liga": "FIFA Series",
+      "combinada": "Trinidad vs Gabón",
+      "probabilidad": "Goles +1.5 (68%)"
+    },
+    {
+      "hora": "08:00",
+      "liga": "FIFA Series",
+      "combinada": "Kenia vs Granada",
+      "probabilidad": "Kenia gana (74%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Uruguay",
+      "combinada": "Defensor vs Albion",
+      "probabilidad": "Goles -2.5 (67%)"
+    },
+    {
+      "hora": "17:10",
+      "liga": "Colombia",
+      "combinada": "Medellín vs América",
+      "probabilidad": "Goles -2.5 (68%)"
+    },
+    {
+      "hora": "18:15",
+      "liga": "Copa Argentina",
+      "combinada": "Unión vs Agropecuario",
+      "probabilidad": "Unión gana (74%)"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "combinada": "Millonarios vs Fortaleza",
+      "probabilidad": "Goles +1.5 (72%)"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "combinada": "Millonarios vs Fortaleza",
+      "probabilidad": "Millonarios gana (76%)"
+    },
+    {
+      "hora": "06:15 + 07:20",
+      "liga": "Copa + Colombia",
+      "combinada": "Unión gana + Millonarios gana",
+      "probabilidad": 0.56
+    },
+    {
+      "hora": "08:00 + 12:00",
+      "liga": "FIFA Series",
+      "combinada": "Kenia gana + Chile o Empate",
+      "probabilidad": 0.54
+    },
+    {
+      "hora": "04:00 + 05:55",
+      "liga": "Uruguay",
+      "combinada": "Defensor o Empate + Maldonado o Empate",
+      "probabilidad": 0.52
+    },
+    {
+      "hora": "⚽ TABLA 5 – GOLES PROBABLES",
+      "liga": "",
+      "combinada": "",
+      "probabilidad": ""
+    },
+    {
+      "hora": "Hora",
+      "liga": "Liga",
+      "combinada": "Partido",
+      "probabilidad": "Pick"
+    },
+    {
+      "hora": "📈 TABLA 6 – TOP VALOR ESTADÍSTICO",
+      "liga": "",
+      "combinada": "",
+      "probabilidad": ""
+    },
+    {
+      "hora": "Hora",
+      "liga": "Liga",
+      "combinada": "Partido",
+      "probabilidad": "Pick"
+    }
+  ],
+  "goles": [
+    {
+      "hora": "00:00",
+      "liga": "FIFA Series",
+      "partido": "Nueva Zelanda vs Chile",
+      "pick": "Goles +1.5 (70%)"
+    },
+    {
+      "hora": "04:00",
+      "liga": "FIFA Series",
+      "partido": "Trinidad vs Gabón",
+      "pick": "Goles +1.5 (68%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Uruguay",
+      "partido": "Defensor vs Albion",
+      "pick": "Goles -2.5 (67%)"
+    },
+    {
+      "hora": "17:10",
+      "liga": "Colombia",
+      "partido": "Medellín vs América",
+      "pick": "Goles -2.5 (68%)"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "partido": "Millonarios vs Fortaleza",
+      "pick": "Goles +1.5 (72%)"
+    }
+  ],
+  "top": [
+    {
+      "hora": "00:00",
+      "liga": "FIFA Series",
+      "partido": "Chile vs NZ",
+      "pick": "Chile o Empate (72%)"
+    },
+    {
+      "hora": "08:00",
+      "liga": "FIFA Series",
+      "partido": "Kenia vs Granada",
+      "pick": "Kenia gana (74%)"
+    },
+    {
+      "hora": "18:15",
+      "liga": "Copa Argentina",
+      "partido": "Unión vs Agropecuario",
+      "pick": "Unión gana (74%)"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "partido": "Millonarios vs Fortaleza",
+      "pick": "Millonarios gana (76%)"
+    }
+  ],
+  "alta_confianza": [
+    {
+      "hora": "12:00",
+      "liga": "Uruguay",
+      "partido": "Juventud vs Boston River",
+      "prediccion_1": "Juventud Gana o Empate (61%)",
+      "prediccion_2": "Juventud Goles: +0.5"
+    },
+    {
+      "hora": "18:15",
+      "liga": "Copa Argentina",
+      "partido": "Unión vs Agropecuario",
+      "prediccion_1": "Unión Gana o Empate (74%)",
+      "prediccion_2": "Agropecuario Handicap -2.5"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "partido": "Millonarios vs Fortaleza",
+      "prediccion_1": "Millonarios Gana o Empate (76%)",
+      "prediccion_2": "Millonarios Goles: +0.5"
+    }
+  ],
+  "public": [
+    {
+      "hora": "12:00",
+      "liga": "Uruguay",
+      "partido": "Juventud vs Boston River",
+      "prediccion_1": "Juventud Gana o Empate (61%)",
+      "prediccion_2": "Juventud Goles: +0.5"
+    },
+    {
+      "hora": "18:15",
+      "liga": "Copa Argentina",
+      "partido": "Unión vs Agropecuario",
+      "prediccion_1": "Unión Gana o Empate (74%)",
+      "prediccion_2": "Agropecuario Handicap -2.5"
+    },
+    {
+      "hora": "19:20",
+      "liga": "Colombia",
+      "partido": "Millonarios vs Fortaleza",
+      "prediccion_1": "Millonarios Gana o Empate (76%)",
+      "prediccion_2": "Millonarios Goles: +0.5"
+    }
+  ]
+}
