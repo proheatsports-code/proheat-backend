@@ -11,7 +11,7 @@ import pandas as pd
 # =========================================================
 # CONFIG
 # =========================================================
-DEFAULT_FILE_PATH = Path(r"C:\Users\Usuario\Documents\Data Insights Enterprise\Sporstats\Picks por IA\Futbol\Fut 300326.xlsx")
+DEFAULT_FILE_PATH = Path(r"C:\Users\Usuario\Documents\Data Insights Enterprise\Sporstats\Picks por IA\Futbol\Fut 080426.xlsx")
 
 SHEETS = {
     "general": "Hoja1",
