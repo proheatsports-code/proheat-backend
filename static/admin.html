@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>ProHeat Sports | Administrador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255,120,0,0.16), transparent 30%),
+        radial-gradient(circle at top right, rgba(255,80,0,0.10), transparent 25%),
+        linear-gradient(180deg, #000000 0%, #050505 100%);
+      color: white;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 900px;
+      height: 900px;
+      background: url("/static/logo.png") no-repeat center;
+      background-size: contain;
+      transform: translate(-50%, -50%);
+      opacity: 0.10;
+      filter: brightness(1.4) contrast(1.2);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      padding: 20px 40px;
+      background: rgba(0,0,0,0.94);
+      border-bottom: 1px solid rgba(255,140,0,0.22);
+      box-shadow: 0 0 24px rgba(255,120,0,0.18);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand img {
+      width: 105px;
+      filter: drop-shadow(0 0 22px rgba(255,120,0,0.85));
+    }
+
+    .brand-text {
+      text-align: center;
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: orange;
+      text-transform: uppercase;
+      text-shadow:
+        0 0 10px rgba(255,120,0,0.8),
+        0 0 20px rgba(255,120,0,0.6),
+        0 0 30px rgba(255,120,0,0.3);
+    }
+
+    .menu {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .menu a, .menu button {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      padding: 10px 16px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,120,0,0.28);
+      background: rgba(255,120,0,0.05);
+      transition: 0.25s;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .menu a:hover, .menu button:hover {
+      background: rgba(255,120,0,0.14);
+      border-color: orange;
+      box-shadow: 0 0 12px rgba(255,120,0,0.4);
+      color: orange;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 2;
+      padding: 34px 54px 70px;
+    }
+
+    .hero-admin {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: stretch;
+      margin-bottom: 26px;
+    }
+
+    .hero-card, .login-card, .panel-box, .table-box, .request-card, .user-card, .admin-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.18);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 0 18px rgba(255,120,0,0.06);
+    }
+
+    .hero-title {
+      margin: 0 0 14px;
+      font-size: 54px;
+      line-height: 0.95;
+      font-weight: 900;
+    }
+
+    .hero-title span { color: orange; }
+
+    .hero-subtitle {
+      color: #d4d4d4;
+      font-size: 18px;
+      line-height: 1.55;
+      max-width: 900px;
+    }
+
+    .metrics {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .metric {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.16);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .metric-value {
+      font-size: 30px;
+      font-weight: 900;
+      color: orange;
+      margin-bottom: 6px;
+    }
+
+    .metric-label {
+      font-size: 14px;
+      color: #cfcfcf;
+    }
+
+    .section-title {
+      font-size: 34px;
+      font-weight: 900;
+      margin: 0 0 8px;
+    }
+
+    .section-title span { color: orange; }
+
+    .section-subtitle {
+      color: #d3d3d3;
+      margin: 0 0 18px;
+      line-height: 1.5;
+    }
+
+    .login-card input,
+    .toolbar input,
+    .toolbar select,
+    .inline-select,
+    .create-admin-box input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,120,0,0.18);
+      background: rgba(255,255,255,0.03);
+      color: white;
+      outline: none;
+    }
+
+    .login-card input,
+    .create-admin-box input {
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      padding: 11px 18px;
+      border-radius: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      border: 1px solid rgba(255,120,0,0.25);
+      background: rgba(255,120,0,0.08);
+      color: white;
+      transition: 0.25s;
+      font-size: 14px;
+    }
+
+    .btn:hover {
+      border-color: orange;
+      color: orange;
+      box-shadow: 0 0 12px rgba(255,120,0,0.35);
+    }
+
+    .btn-primary {
+      background: orange;
+      color: black;
+      border-color: orange;
+      box-shadow: 0 0 15px rgba(255,120,0,0.35);
+    }
+
+    .btn-primary:hover {
+      color: black;
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      border-color: rgba(255,80,80,0.28);
+      background: rgba(255,80,80,0.10);
+      color: #ff9d9d;
+    }
+
+    .btn-danger:hover {
+      color: #ffb3b3;
+      border-color: #ff6b6b;
+      box-shadow: 0 0 12px rgba(255,80,80,0.20);
+    }
+
+    .btn-success {
+      border-color: rgba(0,180,80,0.28);
+      background: rgba(0,180,80,0.10);
+      color: #94ffbf;
+    }
+
+    .btn-success:hover {
+      color: #b8ffd1;
+      border-color: #31d27a;
+      box-shadow: 0 0 12px rgba(0,180,80,0.20);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 7px 12px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1px solid transparent;
+    }
+
+    .status-active {
+      background: rgba(0,180,80,0.12);
+      color: #7dffae;
+      border-color: rgba(0,180,80,0.22);
+    }
+
+    .status-pending {
+      background: rgba(255,191,102,0.12);
+      color: #ffbf66;
+      border-color: rgba(255,191,102,0.25);
+    }
+
+    .status-expired {
+      background: rgba(255,80,80,0.12);
+      color: #ff8b8b;
+      border-color: rgba(255,80,80,0.22);
+    }
+
+    .status-guest {
+      background: rgba(255,255,255,0.08);
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.12);
+    }
+
+    .admin-session {
+      margin-top: 12px;
+      color: #d7d7d7;
+      line-height: 1.5;
+      font-size: 14px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+      margin-top: 24px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr auto auto;
+      gap: 12px;
+      margin-bottom: 18px;
+      align-items: center;
+    }
+
+    .requests-list, .users-list, .admins-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .request-head, .user-head, .admin-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .request-title, .user-title, .admin-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: orange;
+      margin: 0;
+    }
+
+    .meta-line {
+      color: #d0d0d0;
+      line-height: 1.55;
+      font-size: 15px;
+      margin-top: 4px;
+      word-break: break-word;
+    }
+
+    .muted {
+      color: #a8a8a8;
+    }
+
+    .request-actions, .user-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .inline-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .inline-select {
+      width: 180px;
+    }
+
+    .note-box {
+      margin-top: 16px;
+      color: #d6d6d6;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .empty-box {
+      padding: 22px;
+      border-radius: 18px;
+      border: 1px dashed rgba(255,120,0,0.22);
+      color: #cfcfcf;
+      text-align: center;
+    }
+
+    .create-admin-box {
+      margin-top: 22px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .footer {
+      position: relative;
+      z-index: 2;
+      padding: 20px 54px 40px;
+      color: #b8b8b8;
+      font-size: 14px;
+      border-top: 1px solid rgba(255,140,0,0.14);
+    }
+
+    .footer a {
+      color: orange;
+      text-decoration: none;
+    }
+
+    @media (max-width: 1200px) {
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 980px) {
+      .navbar {
+        grid-template-columns: 1fr;
+        gap: 18px;
+        text-align: center;
+      }
+      .brand, .brand-text { justify-self: center; }
+      .menu { justify-content: center; }
+      .hero-admin, .grid-2 { grid-template-columns: 1fr; }
+      .wrap, .footer {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+      .hero-title { font-size: 42px; }
+    }
+
+    @media (max-width: 700px) {
+      .navbar { padding: 18px; }
+      .brand img { width: 86px; }
+      .brand-text { font-size: 20px; letter-spacing: 2px; }
+      .menu a, .menu button { font-size: 13px; padding: 8px 12px; }
+      .wrap { padding: 24px 16px 50px; }
+      .footer { padding: 20px 16px 34px; }
+      .hero-title { font-size: 34px; }
+      .metrics { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
+      .inline-select { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="brand">
+      <img src="/static/logo.png" alt="ProHeat Sports">
+    </div>
+
+    <div class="brand-text">ProHeat Sports</div>
+
+    <div class="menu">
+      <a href="/">Volver al sitio</a>
+      <a href="#solicitudes">Solicitudes</a>
+      <a href="#usuarios">Usuarios</a>
+      <a href="#administradores">Admins</a>
+      <button id="adminAuthButton" onclick="handleAdminAuth()">Iniciar sesión</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <section class="hero-admin">
+      <div class="hero-card">
+        <h1 class="hero-title">Panel de <span>administración</span></h1>
+        <div class="hero-subtitle">
+          Desde aquí puedes revisar nuevas solicitudes, aprobar membresías, eliminar registros,
+          administrar usuarios activos y extender sus accesos.
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-value" id="metricPending">0</div>
+            <div class="metric-label">Solicitudes pendientes</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="metricUsers">0</div>
+            <div class="metric-label">Usuarios totales</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="metricActive">0</div>
+            <div class="metric-label">Membresías activas</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="metricExpired">0</div>
+            <div class="metric-label">Membresías vencidas</div>
+          </div>
+        </div>
+
+        <div class="note-box">
+          El superadmin puede crear subadmins. Los subadmins pueden operar el panel,
+          pero no pueden crear otros administradores.
+        </div>
+      </div>
+
+      <div class="login-card">
+        <h2 class="section-title">Acceso <span>admin</span></h2>
+        <p class="section-subtitle">
+          Inicia sesión como administrador para desbloquear el panel.
+        </p>
+
+        <input type="email" id="adminEmail" placeholder="Correo administrador">
+        <input type="password" id="adminPassword" placeholder="Contraseña">
+        <button class="btn btn-primary" onclick="adminLogin()">Entrar al panel</button>
+
+        <div class="admin-session" id="adminSessionInfo">
+          Sesión actual: sin iniciar.
+        </div>
+
+        <div class="note-box" id="adminMessage">
+          El panel está bloqueado hasta que se valide una sesión de administrador.
+        </div>
+
+        <div class="create-admin-box" id="createSubadminBox" style="display:none;">
+          <h3 style="margin-top:0; color:orange;">Crear subadministrador</h3>
+          <input type="text" id="subadminName" placeholder="Nombre del subadmin">
+          <input type="email" id="subadminEmail" placeholder="Correo del subadmin">
+          <input type="password" id="subadminPassword" placeholder="Contraseña del subadmin">
+          <button class="btn btn-primary" onclick="createSubadmin()">Crear subadministrador</button>
+          <div class="note-box" id="subadminMessage" style="margin-top:12px;">
+            Solo visible para el superadmin.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-box" id="solicitudes">
+      <h2 class="section-title">Solicitudes <span>pendientes</span></h2>
+      <p class="section-subtitle">
+        Aquí verás comprobantes o solicitudes nuevas para aprobar o eliminar.
+      </p>
+
+      <div class="toolbar">
+        <input type="text" id="pendingSearch" placeholder="Buscar por nombre, correo o ID">
+        <select id="pendingFilter">
+          <option value="all">Todas</option>
+          <option value="pending">Pendientes</option>
+          <option value="reviewed">Revisadas</option>
+        </select>
+        <button class="btn" onclick="loadPendingRequests()">Actualizar</button>
+        <button class="btn" onclick="clearPendingFilters()">Limpiar filtros</button>
+      </div>
+
+      <div class="requests-list" id="pendingRequestsList">
+        <div class="empty-box">Inicia sesión como administrador para ver las solicitudes.</div>
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <section class="table-box" id="usuarios">
+        <h2 class="section-title">Usuarios <span>registrados</span></h2>
+        <p class="section-subtitle">
+          Gestiona usuarios, extiende membresías y elimina cuentas.
+        </p>
+
+        <div class="toolbar">
+          <input type="text" id="userSearch" placeholder="Buscar por nombre, correo, ID o estado">
+          <select id="userFilter">
+            <option value="all">Todos los estados</option>
+            <option value="active">Activos</option>
+            <option value="expired">Vencidos</option>
+            <option value="pending">Pendientes</option>
+            <option value="guest">Sin membresía</option>
+          </select>
+          <button class="btn" onclick="loadUsers()">Actualizar</button>
+          <button class="btn" onclick="clearUserFilters()">Limpiar filtros</button>
+        </div>
+
+        <div class="users-list" id="usersList">
+          <div class="empty-box">Inicia sesión como administrador para ver los usuarios.</div>
+        </div>
+      </section>
+
+      <section class="table-box" id="administradores">
+        <h2 class="section-title">Administradores <span>del sistema</span></h2>
+        <p class="section-subtitle">
+          Visible para control interno. Crear subadmins solo desde superadmin.
+        </p>
+
+        <div class="admins-list" id="adminsList">
+          <div class="empty-box">Inicia sesión como superadmin para ver esta sección.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="footer">
+    ProHeat Sports · Panel de administración · <a href="/">Volver al sitio principal</a>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    let adminSession = null;
+    let pendingRequestsData = [];
+    let usersData = [];
+    let adminsData = [];
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function getAdminToken() {
+      return localStorage.getItem("proheat_admin_token") || "";
+    }
+
+    function getAdminHeaders(extra = {}) {
+      const token = getAdminToken();
+      const headers = { ...extra };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      return headers;
+    }
+
+    function setAdminMessage(text) {
+      document.getElementById("adminMessage").textContent = text;
+    }
+
+    function updateAdminAuthButton() {
+      const loggedIn = !!getAdminToken();
+      document.getElementById("adminAuthButton").textContent = loggedIn ? "Cerrar sesión" : "Iniciar sesión";
+    }
+
+    function updateSessionBox() {
+      const box = document.getElementById("adminSessionInfo");
+      const createBox = document.getElementById("createSubadminBox");
+
+      if (!adminSession) {
+        box.innerHTML = "Sesión actual: sin iniciar.";
+        createBox.style.display = "none";
+        return;
+      }
+
+      box.innerHTML = `
+        <strong>Administrador:</strong> ${escapeHtml(adminSession.name || adminSession.email || "Admin")}<br>
+        <strong>Correo:</strong> ${escapeHtml(adminSession.email || "N/A")}<br>
+        <strong>Rol:</strong> ${escapeHtml(adminSession.role || "admin")}
+      `;
+
+      createBox.style.display = adminSession.role === "superadmin" ? "block" : "none";
+    }
+
+    function resetMetrics() {
+      document.getElementById("metricPending").textContent = "0";
+      document.getElementById("metricUsers").textContent = "0";
+      document.getElementById("metricActive").textContent = "0";
+      document.getElementById("metricExpired").textContent = "0";
+    }
+
+    function updateMetrics() {
+      const pendingCount = pendingRequestsData.filter(x => String(x.status || "pending").toLowerCase() === "pending").length;
+      const activeCount = usersData.filter(x => String(x.membership_status || x.status || "").toLowerCase() === "active").length;
+      const expiredCount = usersData.filter(x => String(x.membership_status || x.status || "").toLowerCase() === "expired").length;
+
+      document.getElementById("metricPending").textContent = String(pendingCount);
+      document.getElementById("metricUsers").textContent = String(usersData.length);
+      document.getElementById("metricActive").textContent = String(activeCount);
+      document.getElementById("metricExpired").textContent = String(expiredCount);
+    }
+
+    function handleAdminAuth() {
+      if (getAdminToken()) {
+        adminLogout();
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+
+    function adminLogout() {
+      localStorage.removeItem("proheat_admin_token");
+      localStorage.removeItem("proheat_admin_name");
+      localStorage.removeItem("proheat_admin_email");
+      localStorage.removeItem("proheat_admin_role");
+
+      adminSession = null;
+      pendingRequestsData = [];
+      usersData = [];
+      adminsData = [];
+
+      updateAdminAuthButton();
+      updateSessionBox();
+      setAdminMessage("Sesión de administrador cerrada.");
+      resetMetrics();
+
+      document.getElementById("pendingRequestsList").innerHTML =
+        `<div class="empty-box">Inicia sesión como administrador para ver las solicitudes.</div>`;
+
+      document.getElementById("usersList").innerHTML =
+        `<div class="empty-box">Inicia sesión como administrador para ver los usuarios.</div>`;
+
+      document.getElementById("adminsList").innerHTML =
+        `<div class="empty-box">Inicia sesión como superadmin para ver esta sección.</div>`;
+    }
+
+    async function adminLogin() {
+      const email = document.getElementById("adminEmail").value.trim();
+      const password = document.getElementById("adminPassword").value.trim();
+
+      if (!email || !password) {
+        setAdminMessage("Ingresa correo y contraseña de administrador.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setAdminMessage(data.detail || "No se pudo iniciar sesión como administrador.");
+          return;
+        }
+
+        localStorage.setItem("proheat_admin_token", data.token || "");
+        localStorage.setItem("proheat_admin_name", data.name || "");
+        localStorage.setItem("proheat_admin_email", data.email || email);
+        localStorage.setItem("proheat_admin_role", data.role || "admin");
+
+        adminSession = {
+          name: data.name || "",
+          email: data.email || email,
+          role: data.role || "admin"
+        };
+
+        updateAdminAuthButton();
+        updateSessionBox();
+        setAdminMessage("Sesión de administrador iniciada correctamente.");
+
+        await Promise.all([
+          loadPendingRequests(),
+          loadUsers(),
+          loadAdmins()
+        ]);
+      } catch (error) {
+        console.error(error);
+        setAdminMessage("No se pudo conectar con el backend.");
+      }
+    }
+
+    function restoreAdminSession() {
+      const token = localStorage.getItem("proheat_admin_token");
+      if (!token) {
+        updateAdminAuthButton();
+        updateSessionBox();
+        resetMetrics();
+        return;
+      }
+
+      adminSession = {
+        name: localStorage.getItem("proheat_admin_name") || "",
+        email: localStorage.getItem("proheat_admin_email") || "",
+        role: localStorage.getItem("proheat_admin_role") || "admin"
+      };
+
+      updateAdminAuthButton();
+      updateSessionBox();
+      setAdminMessage("Sesión restaurada. Cargando datos del panel...");
+      loadPendingRequests();
+      loadUsers();
+      loadAdmins();
+    }
+
+    function clearPendingFilters() {
+      document.getElementById("pendingSearch").value = "";
+      document.getElementById("pendingFilter").value = "all";
+      renderPendingRequests();
+    }
+
+    function clearUserFilters() {
+      document.getElementById("userSearch").value = "";
+      document.getElementById("userFilter").value = "all";
+      renderUsers();
+    }
+
+    async function loadPendingRequests() {
+      if (!getAdminToken()) {
+        document.getElementById("pendingRequestsList").innerHTML =
+          `<div class="empty-box">Inicia sesión como administrador para ver las solicitudes.</div>`;
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/pending-requests`, {
+          headers: getAdminHeaders()
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          document.getElementById("pendingRequestsList").innerHTML =
+            `<div class="empty-box">${escapeHtml(data.detail || "No se pudieron cargar las solicitudes.")}</div>`;
+          return;
+        }
+
+        pendingRequestsData = Array.isArray(data.items) ? data.items : [];
+        renderPendingRequests();
+        updateMetrics();
+      } catch (error) {
+        console.error(error);
+        document.getElementById("pendingRequestsList").innerHTML =
+          `<div class="empty-box">No se pudo conectar con el backend.</div>`;
+      }
+    }
+
+    function renderPendingRequests() {
+      const wrap = document.getElementById("pendingRequestsList");
+      const search = document.getElementById("pendingSearch").value.trim().toLowerCase();
+      const filter = document.getElementById("pendingFilter").value;
+
+      let rows = [...pendingRequestsData];
+
+      if (filter !== "all") {
+        rows = rows.filter(item => String(item.status || "pending").toLowerCase() === filter);
+      }
+
+      if (search) {
+        rows = rows.filter(item => {
+          const text = [
+            item.user_id,
+            item.name,
+            item.email,
+            item.status,
+            item.proof_filename,
+            item.notes
+          ].join(" ").toLowerCase();
+          return text.includes(search);
+        });
+      }
+
+      if (!rows.length) {
+        wrap.innerHTML = `<div class="empty-box">No hay solicitudes que coincidan con el filtro actual.</div>`;
+        return;
+      }
+
+      wrap.innerHTML = rows.map(item => {
+        const status = String(item.status || "pending").toLowerCase();
+        const badgeClass =
+          status === "active" ? "status-active" :
+          status === "expired" ? "status-expired" :
+          status === "pending" ? "status-pending" : "status-guest";
+
+        const proofUrl = item.proof_url
+          ? `<div class="meta-line"><strong>Comprobante:</strong> <a href="${escapeHtml(item.proof_url)}" target="_blank" rel="noopener noreferrer" style="color:orange;">Ver archivo</a></div>`
+          : `<div class="meta-line"><strong>Comprobante:</strong> <span class="muted">No disponible</span></div>`;
+
+        return `
+          <div class="request-card">
+            <div class="request-head">
+              <div>
+                <h3 class="request-title">${escapeHtml(item.name || "Solicitud")}</h3>
+                <div class="meta-line"><strong>ID Usuario:</strong> ${escapeHtml(item.user_id || "N/A")}</div>
+                <div class="meta-line"><strong>Correo:</strong> ${escapeHtml(item.email || "N/A")}</div>
+              </div>
+              <div>
+                <span class="status-badge ${badgeClass}">${escapeHtml(item.status || "pending")}</span>
+              </div>
+            </div>
+
+            <div class="meta-line"><strong>Fecha solicitud:</strong> ${escapeHtml(item.created_at || "N/A")}</div>
+            <div class="meta-line"><strong>Archivo:</strong> ${escapeHtml(item.proof_filename || "N/A")}</div>
+            ${proofUrl}
+            <div class="meta-line"><strong>Notas:</strong> ${escapeHtml(item.notes || "Sin notas")}</div>
+
+            <div class="request-actions">
+              <button class="btn btn-success" onclick="approveMembership('${escapeHtml(item.user_id || "")}', 30)">Aprobar 30 días</button>
+              <button class="btn btn-success" onclick="approveMembership('${escapeHtml(item.user_id || "")}', 15)">Aprobar 15 días</button>
+              <button class="btn btn-success" onclick="approveMembership('${escapeHtml(item.user_id || "")}', 7)">Aprobar 7 días</button>
+              <button class="btn btn-danger" onclick="deleteRequest('${escapeHtml(item.request_id || item.user_id || "")}')">Eliminar solicitud</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function approveMembership(userId, days) {
+      if (!userId) {
+        alert("No se encontró el ID del usuario.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/approve-membership`, {
+          method: "POST",
+          headers: getAdminHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ user_id: userId, days })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.detail || "No se pudo aprobar la membresía.");
+          return;
+        }
+
+        setAdminMessage(`Membresía aprobada correctamente para ${userId} por ${days} días.`);
+        await Promise.all([loadPendingRequests(), loadUsers()]);
+      } catch (error) {
+        console.error(error);
+        alert("No se pudo conectar con el backend.");
+      }
+    }
+
+    async function deleteRequest(requestId) {
+      if (!requestId) {
+        alert("No se encontró el ID de la solicitud.");
+        return;
+      }
+
+      if (!confirm("¿Seguro que deseas eliminar esta solicitud?")) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/delete-request`, {
+          method: "POST",
+          headers: getAdminHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ request_id: requestId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.detail || "No se pudo eliminar la solicitud.");
+          return;
+        }
+
+        setAdminMessage("Solicitud eliminada correctamente.");
+        await loadPendingRequests();
+      } catch (error) {
+        console.error(error);
+        alert("No se pudo conectar con el backend.");
+      }
+    }
+
+    async function loadUsers() {
+      if (!getAdminToken()) {
+        document.getElementById("usersList").innerHTML =
+          `<div class="empty-box">Inicia sesión como administrador para ver los usuarios.</div>`;
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/users`, {
+          headers: getAdminHeaders()
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          document.getElementById("usersList").innerHTML =
+            `<div class="empty-box">${escapeHtml(data.detail || "No se pudieron cargar los usuarios.")}</div>`;
+          return;
+        }
+
+        usersData = Array.isArray(data.items) ? data.items : [];
+        renderUsers();
+        updateMetrics();
+      } catch (error) {
+        console.error(error);
+        document.getElementById("usersList").innerHTML =
+          `<div class="empty-box">No se pudo conectar con el backend.</div>`;
+      }
+    }
+
+    function renderUsers() {
+      const wrap = document.getElementById("usersList");
+      const search = document.getElementById("userSearch").value.trim().toLowerCase();
+      const filter = document.getElementById("userFilter").value;
+
+      let rows = [...usersData];
+
+      if (filter !== "all") {
+        rows = rows.filter(item => String(item.membership_status || item.status || "").toLowerCase() === filter);
+      }
+
+      if (search) {
+        rows = rows.filter(item => {
+          const text = [
+            item.user_id,
+            item.name,
+            item.email,
+            item.status,
+            item.membership_status,
+            item.start_date,
+            item.end_date,
+            item.role
+          ].join(" ").toLowerCase();
+          return text.includes(search);
+        });
+      }
+
+      if (!rows.length) {
+        wrap.innerHTML = `<div class="empty-box">No hay usuarios que coincidan con el filtro actual.</div>`;
+        return;
+      }
+
+      wrap.innerHTML = rows.map(item => {
+        const status = String(item.membership_status || item.status || "guest").toLowerCase();
+        const badgeClass =
+          status === "active" ? "status-active" :
+          status === "expired" ? "status-expired" :
+          status === "pending" ? "status-pending" : "status-guest";
+
+        const isNormalUser = item.role === "user";
+
+        return `
+          <div class="user-card">
+            <div class="user-head">
+              <div>
+                <h3 class="user-title">${escapeHtml(item.name || "Usuario")}</h3>
+                <div class="meta-line"><strong>ID:</strong> ${escapeHtml(item.user_id || "N/A")}</div>
+                <div class="meta-line"><strong>Correo:</strong> ${escapeHtml(item.email || "N/A")}</div>
+              </div>
+              <div>
+                <span class="status-badge ${badgeClass}">${escapeHtml(item.membership_status || item.status || "guest")}</span>
+              </div>
+            </div>
+
+            <div class="meta-line"><strong>Fecha de inicio:</strong> ${escapeHtml(item.start_date || "N/A")}</div>
+            <div class="meta-line"><strong>Fecha de vencimiento:</strong> ${escapeHtml(item.end_date || "N/A")}</div>
+            <div class="meta-line"><strong>Rol:</strong> ${escapeHtml(item.role || "user")}</div>
+
+            <div class="inline-group">
+              ${isNormalUser ? `
+                <select class="inline-select" id="extend_${escapeHtml(item.user_id || "")}">
+                  <option value="30">Extender 30 días</option>
+                  <option value="15">Extender 15 días</option>
+                  <option value="7">Extender 7 días</option>
+                </select>
+                <button class="btn btn-success" onclick="extendMembership('${escapeHtml(item.user_id || "")}')">Aplicar extensión</button>
+                <button class="btn" onclick="expireMembership('${escapeHtml(item.user_id || "")}')">Marcar vencida</button>
+              ` : ``}
+              <button class="btn btn-danger" onclick="deleteUser('${escapeHtml(item.user_id || "")}')">Eliminar</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function extendMembership(userId) {
+      if (!userId) {
+        alert("No se encontró el ID del usuario.");
+        return;
+      }
+
+      const select = document.getElementById(`extend_${userId}`);
+      const days = Number(select?.value || 30);
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/extend-membership`, {
+          method: "POST",
+          headers: getAdminHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ user_id: userId, days })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.detail || "No se pudo extender la membresía.");
+          return;
+        }
+
+        setAdminMessage(`Membresía extendida ${days} días para ${userId}.`);
+        await loadUsers();
+      } catch (error) {
+        console.error(error);
+        alert("No se pudo conectar con el backend.");
+      }
+    }
+
+    async function expireMembership(userId) {
+      if (!userId) {
+        alert("No se encontró el ID del usuario.");
+        return;
+      }
+
+      if (!confirm("¿Seguro que deseas marcar esta membresía como vencida?")) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/expire-membership`, {
+          method: "POST",
+          headers: getAdminHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ user_id: userId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.detail || "No se pudo cambiar el estado de la membresía.");
+          return;
+        }
+
+        setAdminMessage(`Membresía marcada como vencida para ${userId}.`);
+        await loadUsers();
+      } catch (error) {
+        console.error(error);
+        alert("No se pudo conectar con el backend.");
+      }
+    }
+
+    async function deleteUser(userId) {
+      if (!userId) {
+        alert("No se encontró el ID del usuario.");
+        return;
+      }
+
+      if (!confirm("¿Seguro que deseas eliminar este usuario?")) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/delete-user`, {
+          method: "POST",
+          headers: getAdminHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ user_id: userId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.detail || "No se pudo eliminar el usuario.");
+          return;
+        }
+
+        setAdminMessage(`Usuario eliminado correctamente: ${userId}.`);
+        await Promise.all([loadUsers(), loadPendingRequests(), loadAdmins()]);
+      } catch (error) {
+        console.error(error);
+        alert("No se pudo conectar con el backend.");
+      }
+    }
+
+    async function createSubadmin() {
+      const name = document.getElementById("subadminName").value.trim();
+      const email = document.getElementById("subadminEmail").value.trim();
+      const password = document.getElementById("subadminPassword").value.trim();
+      const msg = document.getElementById("subadminMessage");
+
+      if (!name || !email || !password) {
+        msg.textContent = "Completa nombre, correo y contraseña.";
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/create-subadmin`, {
+          method: "POST",
+          headers: getAdminHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ name, email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          msg.textContent = data.detail || "No se pudo crear el subadministrador.";
+          return;
+        }
+
+        msg.textContent = `Subadministrador creado: ${data.email}`;
+        document.getElementById("subadminName").value = "";
+        document.getElementById("subadminEmail").value = "";
+        document.getElementById("subadminPassword").value = "";
+        await Promise.all([loadAdmins(), loadUsers()]);
+      } catch (error) {
+        console.error(error);
+        msg.textContent = "No se pudo conectar con el backend.";
+      }
+    }
+
+    async function loadAdmins() {
+      if (!getAdminToken()) {
+        document.getElementById("adminsList").innerHTML =
+          `<div class="empty-box">Inicia sesión como superadmin para ver esta sección.</div>`;
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/admins`, {
+          headers: getAdminHeaders()
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          document.getElementById("adminsList").innerHTML =
+            `<div class="empty-box">${escapeHtml(data.detail || "No disponible para este rol.")}</div>`;
+          return;
+        }
+
+        adminsData = Array.isArray(data.items) ? data.items : [];
+        renderAdmins();
+      } catch (error) {
+        console.error(error);
+        document.getElementById("adminsList").innerHTML =
+          `<div class="empty-box">No se pudo conectar con el backend.</div>`;
+      }
+    }
+
+    function renderAdmins() {
+      const wrap = document.getElementById("adminsList");
+
+      if (!adminsData.length) {
+        wrap.innerHTML = `<div class="empty-box">No hay administradores registrados.</div>`;
+        return;
+      }
+
+      wrap.innerHTML = adminsData.map(item => `
+        <div class="admin-card">
+          <div class="admin-head">
+            <div>
+              <h3 class="admin-title">${escapeHtml(item.name || "Administrador")}</h3>
+              <div class="meta-line"><strong>ID:</strong> ${escapeHtml(item.user_id || "N/A")}</div>
+              <div class="meta-line"><strong>Correo:</strong> ${escapeHtml(item.email || "N/A")}</div>
+            </div>
+            <div>
+              <span class="status-badge status-active">${escapeHtml(item.role || "admin")}</span>
+            </div>
+          </div>
+          <div class="meta-line"><strong>Creado:</strong> ${escapeHtml(item.created_at || "N/A")}</div>
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("pendingSearch").addEventListener("input", renderPendingRequests);
+    document.getElementById("pendingFilter").addEventListener("change", renderPendingRequests);
+    document.getElementById("userSearch").addEventListener("input", renderUsers);
+    document.getElementById("userFilter").addEventListener("change", renderUsers);
+
+    restoreAdminSession();
+  </script>
+</body>
+</html>
