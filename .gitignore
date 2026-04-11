@@ -13,7 +13,5 @@ proheat.db
 *.xlsx
 app.py
 backend1.py
-index.html
 index2.html
-logo.png
-imagenbot.png
+proheat-backend/

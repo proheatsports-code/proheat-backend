@@ -1,5 +1,12 @@
 fastapi
+<<<<<<< HEAD
 uvicorn[standard]
 python-multipart
 pydantic
 email-validator
+=======
+uvicorn
+pydantic[email]
+requests
+python-multipart
+>>>>>>> 8939051425474de8539e4f8eb18b1c6c0e78b429

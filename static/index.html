@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>ProHeat Sports</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255,120,0,0.16), transparent 30%),
+        radial-gradient(circle at top right, rgba(255,80,0,0.10), transparent 25%),
+        linear-gradient(180deg, #000000 0%, #050505 100%);
+      color: white;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 900px;
+      height: 900px;
+      background: url("/static/logo.png") no-repeat center;
+      background-size: contain;
+      transform: translate(-50%, -50%);
+      opacity: 0.12;
+      filter: brightness(1.4) contrast(1.2);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      padding: 20px 40px;
+      background: rgba(0,0,0,0.94);
+      border-bottom: 1px solid rgba(255,140,0,0.22);
+      box-shadow: 0 0 24px rgba(255,120,0,0.18);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand img {
+      width: 105px;
+      filter: drop-shadow(0 0 22px rgba(255,120,0,0.85));
+    }
+
+    .brand-text {
+      text-align: center;
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: orange;
+      text-transform: uppercase;
+      text-shadow:
+        0 0 10px rgba(255,120,0,0.8),
+        0 0 20px rgba(255,120,0,0.6),
+        0 0 30px rgba(255,120,0,0.3);
+    }
+
+    .menu {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .menu a, .menu button {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      padding: 10px 16px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,120,0,0.28);
+      background: rgba(255,120,0,0.05);
+      transition: 0.25s;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .menu a:hover, .menu button:hover {
+      background: rgba(255,120,0,0.14);
+      border-color: orange;
+      box-shadow: 0 0 12px rgba(255,120,0,0.4);
+      color: orange;
+    }
+
+    .hero {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 40px;
+      padding: 56px 54px 68px;
+      align-items: center;
+      min-height: calc(100vh - 100px);
+    }
+
+    .hero-title {
+      font-size: 72px;
+      font-weight: 900;
+      line-height: 0.95;
+      margin: 0;
+      max-width: 900px;
+    }
+
+    .hero-title span { color: orange; }
+
+    .hero-subtitle {
+      margin-top: 20px;
+      color: #ccc;
+      font-size: 20px;
+      max-width: 760px;
+      line-height: 1.45;
+    }
+
+    .buttons {
+      margin-top: 28px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: 0.3s;
+      border: none;
+      font-size: 15px;
+    }
+
+    .btn-primary {
+      background: orange;
+      color: black;
+      box-shadow: 0 0 15px rgba(255,120,0,0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 20px rgba(255,120,0,0.55);
+    }
+
+    .btn-secondary {
+      border: 1px solid orange;
+      color: orange;
+      background: transparent;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255,140,0,0.08);
+    }
+
+    .panel {
+      background: #111;
+      border-radius: 24px;
+      padding: 24px;
+      border: 1px solid rgba(255,120,0,0.2);
+      box-shadow: 0 0 24px rgba(255,120,0,0.08);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+
+    .panel-header h3 {
+      font-size: 24px;
+      margin: 0;
+      color: white;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255,120,0,0.12);
+    }
+
+    .card:last-child { margin-bottom: 0; }
+
+    .match {
+      font-weight: bold;
+      font-size: 18px;
+      color: orange;
+    }
+
+    section.content-section {
+      position: relative;
+      z-index: 2;
+      padding: 72px 54px;
+      border-top: 1px solid rgba(255,140,0,0.14);
+    }
+
+    .section-title {
+      font-size: 44px;
+      font-weight: 900;
+      margin: 0 0 14px;
+    }
+
+    .section-title span { color: orange; }
+
+    .section-subtitle {
+      color: #cfcfcf;
+      max-width: 1050px;
+      font-size: 18px;
+      line-height: 1.5;
+      margin-bottom: 30px;
+    }
+
+    .data-box, .premium-gate, .premium-content-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.18);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 26px;
+      box-shadow: 0 0 16px rgba(255,120,0,0.05);
+    }
+
+    .data-box h3, .premium-gate h3 {
+      margin: 0 0 12px;
+      color: orange;
+      font-size: 24px;
+    }
+
+    .data-box p, .premium-gate p, .premium-note {
+      margin: 0 0 16px;
+      color: #d8d8d8;
+      line-height: 1.5;
+    }
+
+    .data-status {
+      margin-top: 12px;
+      color: #ffbf66;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .prediction-list,
+    .mini-card-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .prediction-item,
+    .mini-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.15);
+      border-radius: 18px;
+      padding: 18px 20px;
+    }
+
+    .prediction-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .prediction-meta,
+    .mini-card-meta {
+      color: orange;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .prediction-match,
+    .mini-card-title {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .prediction-pick,
+    .mini-card-line {
+      color: #d0d0d0;
+      line-height: 1.5;
+    }
+
+    .prediction-pick span {
+      display: block;
+      margin-top: 6px;
+      color: #ffbf66;
+    }
+
+    .prediction-context {
+      color: #aaaaaa;
+      line-height: 1.5;
+      font-size: 15px;
+      margin-top: 8px;
+    }
+
+    .status-pill {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .status-guest {
+      background: rgba(255,255,255,0.08);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .status-pending {
+      background: rgba(255,191,102,0.12);
+      color: #ffbf66;
+      border: 1px solid rgba(255,191,102,0.25);
+    }
+
+    .status-active {
+      background: rgba(0,180,80,0.12);
+      color: #7dffae;
+      border: 1px solid rgba(0,180,80,0.22);
+    }
+
+    .status-expired,
+    .status-error {
+      background: rgba(255,80,80,0.12);
+      color: #ff8b8b;
+      border: 1px solid rgba(255,80,80,0.22);
+    }
+
+    .auth-grid,
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 16px;
+    }
+
+    .contact-grid { grid-template-columns: repeat(4, 1fr); }
+
+    .auth-box,
+    .contact-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,120,0,0.14);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .auth-box h4,
+    .contact-card h3 {
+      margin: 0 0 10px;
+      color: orange;
+      font-size: 20px;
+    }
+
+    .auth-box input {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,120,0,0.18);
+      background: rgba(255,255,255,0.03);
+      color: white;
+      outline: none;
+    }
+
+    .auth-message,
+    .proof-note,
+    .session-box,
+    .contact-card p {
+      color: #d8d8d8;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .proof-box {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .proof-box input[type="file"] {
+      width: 100%;
+      margin-top: 10px;
+      color: #d8d8d8;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.16);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .session-box {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .premium-tabs {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .premium-tab-btn {
+      background: rgba(255,120,0,0.05);
+      color: white;
+      border: 1px solid rgba(255,120,0,0.25);
+      border-radius: 22px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.25s;
+    }
+
+    .premium-tab-btn:hover,
+    .premium-tab-btn.active {
+      background: rgba(255,120,0,0.15);
+      border-color: orange;
+      color: orange;
+      box-shadow: 0 0 12px rgba(255,120,0,0.35);
+    }
+
+    .premium-tab-btn.confidence-tab {
+      border-color: rgba(255,191,102,0.45);
+    }
+
+    .premium-tab-btn.confidence-tab:hover,
+    .premium-tab-btn.confidence-tab.active {
+      color: #ffbf66;
+      border-color: #ffbf66;
+      box-shadow: 0 0 12px rgba(255,191,102,0.35);
+    }
+
+    .premium-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .premium-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    .premium-table th,
+    .premium-table td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      vertical-align: top;
+    }
+
+    .premium-table th {
+      color: orange;
+      background: rgba(255,120,0,0.06);
+      position: sticky;
+      top: 0;
+    }
+
+    .premium-table td {
+      color: #d7d7d7;
+    }
+
+    .hero-picks-button {
+      margin-top: 18px;
+    }
+
+    .bot-section-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .bot-image-card,
+    .bot-text-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.18);
+      border-radius: 28px;
+      padding: 22px;
+      box-shadow: 0 0 16px rgba(255,120,0,0.06);
+    }
+
+    .bot-image {
+      width: 100%;
+      display: block;
+      border-radius: 22px;
+    }
+
+    .bot-card-title {
+      margin: 0 0 18px;
+      font-size: 28px;
+      color: orange;
+    }
+
+    .bot-card-text {
+      color: #d8d8d8;
+      line-height: 1.6;
+      font-size: 17px;
+      margin-bottom: 18px;
+    }
+
+    .bot-feature-list {
+      margin: 0 0 22px;
+      padding-left: 24px;
+      color: #d8d8d8;
+      line-height: 1.7;
+      font-size: 17px;
+    }
+
+    .social-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+      min-height: 42px;
+    }
+
+    .social-link:hover {
+      color: orange;
+    }
+
+    .social-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 16px;
+      background: rgba(255,120,0,0.15);
+      border: 1px solid rgba(255,120,0,0.22);
+      color: orange;
+      flex: 0 0 34px;
+    }
+
+    .facebook-icon {
+      text-transform: lowercase;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .footer {
+      position: relative;
+      z-index: 2;
+      padding: 35px 54px 45px;
+      border-top: 1px solid rgba(255,140,0,0.14);
+      color: #b8b8b8;
+      font-size: 14px;
+    }
+
+    .footer a {
+      color: orange;
+      text-decoration: none;
+    }
+
+    @media (max-width: 1200px) {
+      .brand-text { font-size: 26px; }
+      .hero-title { font-size: 60px; }
+      .contact-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 900px) {
+      .navbar {
+        grid-template-columns: 1fr;
+        gap: 18px;
+        text-align: center;
+      }
+      .brand, .brand-text { justify-self: center; }
+      .menu { justify-content: center; }
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 44px 26px 60px;
+      }
+      section.content-section, .footer {
+        padding-left: 26px;
+        padding-right: 26px;
+      }
+      .hero-title { font-size: 46px; }
+      .auth-grid, .contact-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 700px) {
+      .navbar { padding: 18px 18px; }
+      .brand img { width: 86px; }
+      .brand-text { font-size: 20px; letter-spacing: 2px; }
+      .menu a, .menu button { font-size: 13px; padding: 8px 12px; }
+      .hero { padding: 30px 18px 46px; }
+      .hero-title { font-size: 36px; }
+      .hero-subtitle { font-size: 17px; }
+      section.content-section, .footer { padding: 54px 18px; }
+      .section-title { font-size: 33px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="brand">
+      <img src="/static/logo.png" alt="ProHeat Sports">
+    </div>
+
+    <div class="brand-text">ProHeat Sports</div>
+
+    <div class="menu">
+      <a href="#home">Home</a>
+      <a href="#predicciones">Predicciones</a>
+      <a href="#premium">Premium</a>
+      <a href="#bot-proheat">Bot</a>
+      <a href="#contacto">Contacto</a>
+      <a href="/admin">Admin</a>
+      <button id="authButton" onclick="handleAuthAction()">Iniciar sesión</button>
+    </div>
+  </div>
+
+  <div class="hero" id="home">
+    <div>
+      <h1 class="hero-title">
+        Predicciones deportivas con <span>estructura centralizada</span>
+      </h1>
+
+      <div class="hero-subtitle">
+        ProHeat Sports integra picks públicos, contenido premium y panel administrativo desde una sola infraestructura. Todo alimentado directamente desde el backend central de ProHeat.
+      </div>
+
+      <div class="buttons">
+        <a href="#premium" class="btn btn-primary">Ver premium</a>
+        <a href="#predicciones" class="btn btn-secondary">Ver picks</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Match Center</h3>
+      </div>
+
+      <div id="heroCards">
+        <div class="card">
+          <div class="match">ProHeat</div>
+          <div style="color:#aaa;">Esperando datos...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="content-section" id="predicciones">
+    <h2 class="section-title">Predicciones del <span>día</span></h2>
+
+    <div class="data-box">
+      <h3>Fuente actual</h3>
+      <p>
+        Datos cargados directamente desde la API central de ProHeat Sports.
+      </p>
+      <button class="btn btn-primary" onclick="loadPublicFromApi()">Recargar picks públicos</button>
+      <div class="data-status" id="dataStatus">Esperando datos...</div>
+    </div>
+
+    <div class="prediction-list" id="predictionList">
+      <div class="prediction-item">
+        <div class="prediction-top">
+          <div class="prediction-meta">Cargando</div>
+        </div>
+        <div class="prediction-match">Esperando predicciones</div>
+        <div class="prediction-pick">Un momento...</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="content-section" id="premium">
+    <h2 class="section-title">Acceso <span>premium</span></h2>
+
+    <div class="premium-gate" id="authArea">
+      <div class="status-pill status-guest" id="membershipStatusPill">Invitado · Premium bloqueado</div>
+      <h3>Acceso premium por membresía</h3>
+      <p id="membershipMessage">
+        Crea tu cuenta o inicia sesión. Si tu membresía está activa, se mostrarán las tablas premium.
+      </p>
+
+      <button class="btn btn-secondary" id="authButtonBody" onclick="handleAuthAction()">Iniciar sesión</button>
+
+      <div class="auth-grid">
+        <div class="auth-box">
+          <h4>Crear cuenta</h4>
+          <input type="text" id="registerName" placeholder="Nombre">
+          <input type="email" id="registerEmail" placeholder="Correo">
+          <input type="password" id="registerPassword" placeholder="Contraseña">
+          <button class="btn btn-primary" onclick="registerUser()">Crear cuenta</button>
+          <div class="auth-message" id="registerMessage"></div>
+        </div>
+
+        <div class="auth-box">
+          <h4>Iniciar sesión</h4>
+          <input type="email" id="loginEmail" placeholder="Correo">
+          <input type="password" id="loginPassword" placeholder="Contraseña">
+          <button class="btn btn-primary" onclick="loginUser()">Iniciar sesión</button>
+          <div class="auth-message" id="loginMessage"></div>
+        </div>
+      </div>
+
+      <div class="session-box" id="sessionInfo">
+        Sesión actual: sin iniciar.
+      </div>
+
+      <div class="proof-box" id="proofBox">
+        <strong style="color:#ffbf66;">Subir comprobante de pago</strong>
+        <div class="proof-note">
+          Tu comprobante será enviado a revisión.
+        </div>
+        <input type="file" id="proofFile" />
+        <button class="btn btn-secondary" style="margin-top:12px;" onclick="uploadProof()">Enviar comprobante</button>
+        <div class="auth-message" id="proofMessage"></div>
+      </div>
+    </div>
+
+    <div id="premiumLockedBox" class="premium-content-box" style="display:block;">
+      <div class="premium-note">
+        El contenido premium está bloqueado. Inicia sesión con membresía activa.
+      </div>
+    </div>
+
+    <div id="premiumUnlockedBox" style="display:none;">
+      <div class="premium-tabs" id="premiumTabs">
+        <button class="premium-tab-btn active" onclick="showPremiumTab('general', this)">Tabla general</button>
+        <button class="premium-tab-btn" onclick="showPremiumTab('ultra', this)">Ultrafiltrada</button>
+        <button class="premium-tab-btn" onclick="showPremiumTab('stakes', this)">Stakes</button>
+        <button class="premium-tab-btn" onclick="showPremiumTab('combinadas', this)">Combinadas</button>
+        <button class="premium-tab-btn" onclick="showPremiumTab('goles', this)">Goles</button>
+        <button class="premium-tab-btn" onclick="showPremiumTab('top', this)">Top valor</button>
+        <button class="premium-tab-btn confidence-tab" onclick="showPremiumTab('alta_confianza', this)">Alta confianza</button>
+      </div>
+
+      <div class="premium-content-box">
+        <div class="premium-note" id="premiumNote">
+          Contenido premium cargado desde la API.
+        </div>
+        <div id="premiumContent">
+          <div class="premium-note">Esperando carga...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="content-section" id="bot-proheat">
+    <h2 class="section-title">Bot <span>ProHeat IA</span></h2>
+
+    <div class="bot-section-wrap">
+      <div class="bot-image-card">
+        <img src="/static/imagenbot.png" alt="Bot ProHeat Sports" class="bot-image">
+      </div>
+
+      <div class="bot-text-card">
+        <h3 class="bot-card-title">¿Cuál es su función?</h3>
+        <p class="bot-card-text">
+          El bot de ProHeat Sports funciona como acceso directo a tus herramientas deportivas dentro de Telegram. Te permite entrar al sistema de ProHeat, consultar contenido, revisar picks y mantenerte conectado con las actualizaciones del proyecto.
+        </p>
+        <ul class="bot-feature-list">
+          <li>Acceso rápido al bot oficial de ProHeat Sports.</li>
+          <li>Conexión directa con contenido, picks y módulos del ecosistema ProHeat.</li>
+          <li>Canal práctico para usuarios que siguen las predicciones desde Telegram.</li>
+        </ul>
+        <a href="https://t.me/ProHeatSports_Bot" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Abrir Bot ProHeat</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="content-section" id="contacto">
+    <h2 class="section-title">Contacto y <span>redes</span></h2>
+
+    <div class="contact-grid">
+      <div class="contact-card">
+        <h3>Instagram</h3>
+        <a href="https://www.instagram.com/proheatsports" target="_blank" rel="noopener noreferrer" class="social-link">
+          <span class="social-icon">📷</span>
+          <span>@proheatsports</span>
+        </a>
+      </div>
+
+      <div class="contact-card">
+        <h3>Facebook</h3>
+        <a href="https://www.facebook.com/ProHeatSports" target="_blank" rel="noopener noreferrer" class="social-link">
+          <span class="social-icon facebook-icon">f</span>
+          <span>ProHeatSports</span>
+        </a>
+      </div>
+
+      <div class="contact-card">
+        <h3>Canal de Picks Gratuitas</h3>
+        <a href="https://t.me/proheatsports" target="_blank" rel="noopener noreferrer" class="social-link">
+          <span class="social-icon">✈</span>
+          <span>t.me/proheatsports</span>
+        </a>
+      </div>
+
+      <div class="contact-card">
+        <h3>Correo</h3>
+        <p>proheatsports@gmail.com</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    ProHeat Sports · Inteligencia deportiva basada en datos · <a href="#home">Volver arriba</a>
+  </div>
+
+  <script>
+    const API_BASE = "https://proheat-backend-production.up.railway.app";
+    const DATA_API_BASE = "https://proheat-backend-production.up.railway.app";
+
+    let premiumApiData = {};
+
+    const premiumNotes = {
+      general: "Tabla general cargada desde /api/data/general.",
+      ultra: "Ultrafiltrada cargada desde /api/data/ultra.",
+      stakes: "Stakes cargadas desde /api/data/stakes.",
+      combinadas: "Combinadas cargadas desde /api/data/combinadas.",
+      goles: "Goles cargados desde /api/data/goles.",
+      top: "Top valor cargado desde /api/data/top.",
+      alta_confianza: "Alta confianza cargada desde /api/data/alta-confianza."
+    };
+
+    function scrollToAuth() {
+      document.getElementById("premium").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderPublicCards(rows) {
+      const predictionList = document.getElementById("predictionList");
+      const heroCards = document.getElementById("heroCards");
+
+      predictionList.innerHTML = "";
+      heroCards.innerHTML = "";
+
+      if (!rows || !rows.length) {
+        predictionList.innerHTML = `<div class="prediction-item"><div class="prediction-match">No hay picks públicos disponibles</div></div>`;
+        heroCards.innerHTML = `<div class="card"><div class="match">Sin datos</div><div style="color:#aaa;">La API no devolvió picks.</div></div>`;
+        return;
+      }
+
+      rows.forEach((item, index) => {
+        const probMatch = String(item.prediccion_1 || "").match(/\((\d+)%\)/);
+        const prob = probMatch ? `${probMatch[1]}%` : "ProHeat";
+
+        const cardHtml = `
+          <div class="prediction-top">
+            <div class="prediction-meta">${escapeHtml(item.hora || "Hora")} · ${escapeHtml(item.liga || "Liga")}</div>
+            <div class="prediction-meta">${escapeHtml(prob)}</div>
+          </div>
+          <div class="prediction-match">${escapeHtml(item.partido || "Partido")}</div>
+          <div class="prediction-pick">
+            ${escapeHtml(item.prediccion_1 || "")}
+            ${item.prediccion_2 ? `<span>${escapeHtml(item.prediccion_2)}</span>` : ""}
+          </div>
+          <div class="prediction-context">Datos servidos automáticamente desde la API de ProHeat.</div>
+        `;
+
+        const card = document.createElement("div");
+        card.className = "prediction-item";
+        card.innerHTML = cardHtml;
+        predictionList.appendChild(card);
+
+        if (index < 3) {
+          const heroCard = document.createElement("div");
+          heroCard.className = "card";
+          heroCard.innerHTML = `
+            <div class="match">${escapeHtml(item.partido || "Partido")}</div>
+          `;
+          heroCards.appendChild(heroCard);
+        }
+      });
+
+      const heroButton = document.createElement("a");
+      heroButton.className = "btn btn-primary hero-picks-button";
+      heroButton.href = "#predicciones";
+      heroButton.textContent = "Ir a picks gratuitas";
+      heroCards.appendChild(heroButton);
+    }
+
+    function renderTable(rows) {
+      if (!rows || !rows.length) {
+        return `<div class="premium-note">No hay datos disponibles.</div>`;
+      }
+
+      const columns = Object.keys(rows[0]);
+      let html = `<div class="premium-table-wrapper"><table class="premium-table"><thead><tr>`;
+      columns.forEach(col => {
+        html += `<th>${escapeHtml(col)}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+
+      rows.forEach(row => {
+        html += `<tr>`;
+        columns.forEach(col => {
+          html += `<td>${escapeHtml(row[col])}</td>`;
+        });
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table></div>`;
+      return html;
+    }
+
+    function renderMiniCards(rows, type = "simple") {
+      if (!rows || !rows.length) {
+        return `<div class="premium-note">No hay datos disponibles.</div>`;
+      }
+
+      let html = `<div class="mini-card-grid">`;
+
+      rows.forEach(row => {
+        const title = row.partido || row.combinada || "Registro";
+        const meta = `${row.hora || "Hora"} · ${row.liga || "Liga"}`;
+
+        if (type === "alta") {
+          html += `
+            <div class="mini-card">
+              <div class="mini-card-meta">${escapeHtml(meta)}</div>
+              <div class="mini-card-title">${escapeHtml(title)}</div>
+              <div class="mini-card-line">${escapeHtml(row.prediccion_1 || "")}</div>
+              ${row.prediccion_2 ? `<div class="mini-card-line" style="color:#ffbf66; margin-top:6px;">${escapeHtml(row.prediccion_2)}</div>` : ""}
+            </div>
+          `;
+        } else if (type === "stakes") {
+          html += `
+            <div class="mini-card">
+              <div class="mini-card-meta">${escapeHtml(meta)} · Stake: ${escapeHtml(row.stake || "N/A")}</div>
+              <div class="mini-card-title">${escapeHtml(title)}</div>
+              <div class="mini-card-line">${escapeHtml(row.pick || "")}</div>
+            </div>
+          `;
+        } else if (type === "combinadas") {
+          html += `
+            <div class="mini-card">
+              <div class="mini-card-meta">${escapeHtml(meta)}</div>
+              <div class="mini-card-title">${escapeHtml(row.combinada || title)}</div>
+              <div class="mini-card-line">${escapeHtml(row.probabilidad || "")}</div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="mini-card">
+              <div class="mini-card-meta">${escapeHtml(meta)}</div>
+              <div class="mini-card-title">${escapeHtml(title)}</div>
+              <div class="mini-card-line">${escapeHtml(row.pick || row.prediccion_1 || row.ml_prob || "")}</div>
+            </div>
+          `;
+        }
+      });
+
+      html += `</div>`;
+      return html;
+    }
+
+    async function fetchDataSection(endpoint) {
+      const response = await fetch(`${DATA_API_BASE}${endpoint}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || `Error cargando ${endpoint}`);
+      }
+
+      return data.items || [];
+    }
+
+    async function loadPublicFromApi() {
+      const status = document.getElementById("dataStatus");
+
+      try {
+        const rows = await fetchDataSection("/api/data/public");
+        renderPublicCards(rows);
+        status.textContent = `Picks públicos cargados correctamente. Registros: ${rows.length}`;
+      } catch (error) {
+        console.error(error);
+        status.textContent = "No se pudieron cargar los picks públicos desde la API.";
+      }
+    }
+
+    async function loadPremiumFromApi() {
+      try {
+        premiumApiData.general = await fetchDataSection("/api/data/general");
+        premiumApiData.ultra = await fetchDataSection("/api/data/ultra");
+        premiumApiData.stakes = await fetchDataSection("/api/data/stakes");
+        premiumApiData.combinadas = await fetchDataSection("/api/data/combinadas");
+        premiumApiData.goles = await fetchDataSection("/api/data/goles");
+        premiumApiData.top = await fetchDataSection("/api/data/top");
+        premiumApiData.alta_confianza = await fetchDataSection("/api/data/alta-confianza");
+      } catch (error) {
+        console.error("Error cargando premium desde la API:", error);
+      }
+    }
+
+    function showPremiumTab(section, btn = null) {
+      const content = document.getElementById("premiumContent");
+      const note = document.getElementById("premiumNote");
+      const buttons = document.querySelectorAll(".premium-tab-btn");
+
+      buttons.forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+
+      const rows = premiumApiData[section] || [];
+      note.textContent = premiumNotes[section] || "Contenido premium cargado.";
+
+      if (section === "general") {
+        content.innerHTML = renderTable(rows);
+      } else if (section === "ultra" || section === "goles" || section === "top") {
+        content.innerHTML = renderMiniCards(rows, "simple");
+      } else if (section === "stakes") {
+        content.innerHTML = renderMiniCards(rows, "stakes");
+      } else if (section === "combinadas") {
+        content.innerHTML = renderMiniCards(rows, "combinadas");
+      } else if (section === "alta_confianza") {
+        content.innerHTML = renderMiniCards(rows, "alta");
+      } else {
+        content.innerHTML = `<div class="premium-note">Sin contenido.</div>`;
+      }
+    }
+
+    function updateAuthButtons() {
+      const loggedIn = !!localStorage.getItem("proheat_user_id");
+      const label = loggedIn ? "Cerrar sesión" : "Iniciar sesión";
+      const navBtn = document.getElementById("authButton");
+      const bodyBtn = document.getElementById("authButtonBody");
+      if (navBtn) navBtn.textContent = label;
+      if (bodyBtn) bodyBtn.textContent = label;
+    }
+
+    function logoutUser() {
+      localStorage.removeItem("proheat_user_id");
+      localStorage.removeItem("proheat_user_name");
+      localStorage.removeItem("proheat_user_status");
+      localStorage.removeItem("proheat_user_token");
+
+      document.getElementById("sessionInfo").innerHTML = `Sesión actual: sin iniciar.`;
+      document.getElementById("loginMessage").textContent = "Sesión cerrada correctamente.";
+      document.getElementById("membershipStatusPill").className = "status-pill status-guest";
+      document.getElementById("membershipStatusPill").textContent = "Invitado · Premium bloqueado";
+      document.getElementById("membershipMessage").textContent = "Crea tu cuenta o inicia sesión.";
+      document.getElementById("premiumLockedBox").style.display = "block";
+      document.getElementById("premiumUnlockedBox").style.display = "none";
+      document.getElementById("proofBox").style.display = "block";
+      updateAuthButtons();
+    }
+
+    function handleAuthAction() {
+      const loggedIn = !!localStorage.getItem("proheat_user_id");
+      if (loggedIn) {
+        logoutUser();
+      } else {
+        scrollToAuth();
+      }
+    }
+
+    async function registerUser() {
+      const name = document.getElementById("registerName").value.trim();
+      const email = document.getElementById("registerEmail").value.trim();
+      const password = document.getElementById("registerPassword").value.trim();
+      const msg = document.getElementById("registerMessage");
+
+      if (!name || !email || !password) {
+        msg.textContent = "Completa nombre, correo y contraseña.";
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          msg.textContent = `Cuenta creada correctamente. ID asignado: ${data.user_id}`;
+          document.getElementById("loginEmail").value = email;
+        } else {
+          msg.textContent = data.detail || "No se pudo crear la cuenta.";
+        }
+      } catch (error) {
+        console.error(error);
+        msg.textContent = "No se pudo conectar con el backend.";
+      }
+    }
+
+    async function loginUser() {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+      const msg = document.getElementById("loginMessage");
+
+      if (!email || !password) {
+        msg.textContent = "Ingresa correo y contraseña.";
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          msg.textContent = data.detail || "Login incorrecto.";
+          return;
+        }
+
+        localStorage.setItem("proheat_user_id", data.user_id);
+        localStorage.setItem("proheat_user_name", data.name);
+        localStorage.setItem("proheat_user_status", data.status);
+        localStorage.setItem("proheat_user_token", data.token || "");
+
+        msg.textContent = `Bienvenido, ${data.name}. Verificando membresía...`;
+        document.getElementById("sessionInfo").innerHTML = `
+          <strong>Usuario:</strong> ${escapeHtml(data.name)}<br>
+          <strong>ID:</strong> ${escapeHtml(data.user_id)}<br>
+          <strong>Estado de usuario:</strong> ${escapeHtml(data.status)}
+        `;
+
+        await checkMembership(data.user_id);
+        updateAuthButtons();
+      } catch (error) {
+        console.error(error);
+        msg.textContent = "No se pudo conectar con el backend.";
+      }
+    }
+
+    async function checkMembership(userId = null) {
+      const user_id = userId || localStorage.getItem("proheat_user_id");
+      const pill = document.getElementById("membershipStatusPill");
+      const msg = document.getElementById("membershipMessage");
+      const locked = document.getElementById("premiumLockedBox");
+      const unlocked = document.getElementById("premiumUnlockedBox");
+      const proofBox = document.getElementById("proofBox");
+
+      if (!user_id) {
+        pill.className = "status-pill status-guest";
+        pill.textContent = "Invitado · Premium bloqueado";
+        msg.textContent = "Crea tu cuenta o inicia sesión.";
+        locked.style.display = "block";
+        unlocked.style.display = "none";
+        proofBox.style.display = "block";
+        updateAuthButtons();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/membership/${user_id}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          pill.className = "status-pill status-error";
+          pill.textContent = "Error consultando membresía";
+          msg.textContent = data.detail || "No se pudo consultar la membresía.";
+          locked.style.display = "block";
+          unlocked.style.display = "none";
+          return;
+        }
+
+        if (data.membership === "active") {
+          pill.className = "status-pill status-active";
+          pill.textContent = "Membresía activa · Premium desbloqueado";
+          msg.textContent = `Tu membresía está activa. Fin: ${data.end_date || "N/A"}`;
+          locked.style.display = "none";
+          unlocked.style.display = "block";
+          proofBox.style.display = "none";
+
+          const activeButton = document.querySelector(".premium-tab-btn.active");
+          showPremiumTab("general", activeButton);
+          updateAuthButtons();
+        } else if (data.membership === "expired") {
+          pill.className = "status-pill status-expired";
+          pill.textContent = "Membresía vencida";
+          msg.textContent = "Tu membresía ha vencido.";
+          locked.style.display = "block";
+          unlocked.style.display = "none";
+          proofBox.style.display = "block";
+        } else {
+          pill.className = "status-pill status-pending";
+          pill.textContent = "Sin membresía activa";
+          msg.textContent = "Tu cuenta existe, pero todavía no tienes una membresía activa.";
+          locked.style.display = "block";
+          unlocked.style.display = "none";
+          proofBox.style.display = "block";
+        }
+      } catch (error) {
+        console.error(error);
+        pill.className = "status-pill status-error";
+        pill.textContent = "Backend no disponible";
+        msg.textContent = "No se pudo conectar con el backend para validar la membresía.";
+        locked.style.display = "block";
+        unlocked.style.display = "none";
+      }
+    }
+
+    async function uploadProof() {
+      const user_id = localStorage.getItem("proheat_user_id");
+      const file = document.getElementById("proofFile").files[0];
+      const msg = document.getElementById("proofMessage");
+
+      if (!user_id) {
+        msg.textContent = "Primero inicia sesión.";
+        return;
+      }
+
+      if (!file) {
+        msg.textContent = "Selecciona un comprobante antes de enviarlo.";
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(`${API_BASE}/upload-proof/${user_id}`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          msg.textContent = data.message || "Comprobante enviado correctamente.";
+          await checkMembership(user_id);
+        } else {
+          msg.textContent = data.detail || "No se pudo enviar el comprobante.";
+        }
+      } catch (error) {
+        console.error(error);
+        msg.textContent = "No se pudo conectar con el backend.";
+      }
+    }
+
+    function restoreSession() {
+      const user_id = localStorage.getItem("proheat_user_id");
+      const user_name = localStorage.getItem("proheat_user_name");
+      const user_status = localStorage.getItem("proheat_user_status");
+
+      if (user_id && user_name) {
+        document.getElementById("sessionInfo").innerHTML = `
+          <strong>Usuario:</strong> ${escapeHtml(user_name)}<br>
+          <strong>ID:</strong> ${escapeHtml(user_id)}<br>
+          <strong>Estado de usuario:</strong> ${escapeHtml(user_status || "N/A")}
+        `;
+        checkMembership(user_id);
+      } else {
+        checkMembership();
+      }
+      updateAuthButtons();
+    }
+
+    async function bootApp() {
+      await loadPublicFromApi();
+      await loadPremiumFromApi();
+      restoreSession();
+    }
+
+    bootApp();
+  </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "public": [],
   "general": [],
   "ultra": [],
@@ -7,4 +8,765 @@
   "goles": [],
   "top": [],
   "alta_confianza": []
+=======
+  "date": "2026-04-08",
+  "source_file": "Fut 080426.xlsx",
+  "generated_at": "2026-04-08T13:41:58",
+  "general": [
+    {
+      "hora": "07:00",
+      "liga": "Grecia Playoffs",
+      "sem": "(A)",
+      "partido": "AEL 1964 vs Panaitolikos",
+      "ml_/_dc": "AEL o Empate (67%)",
+      "goles_local": "Goles Local +0.5 (63%)",
+      "goles_visitante": "Goles Visitante -1.5 (78%)",
+      "marcador_global": "Goles -3.5 (76%)",
+      "sot": "SoT -8.5 (71%)",
+      "corners": "Corners -10.5 (69%)",
+      "tarjetas": "Tarjetas -5.5 (74%)"
+    },
+    {
+      "hora": "08:00",
+      "liga": "Grecia Playoffs",
+      "sem": "(A)",
+      "partido": "Panserraikos vs Asteras Tripolis",
+      "ml_/_dc": "Asteras o Empate (64%)",
+      "goles_local": "Goles Local -1.5 (80%)",
+      "goles_visitante": "Goles Visitante +0.5 (61%)",
+      "marcador_global": "Goles -3.5 (77%)",
+      "sot": "SoT -8.5 (70%)",
+      "corners": "Corners -10.5 (68%)",
+      "tarjetas": "Tarjetas -5.5 (73%)"
+    },
+    {
+      "hora": "08:30",
+      "liga": "Croacia Cup SF",
+      "sem": "(V)",
+      "partido": "Rijeka vs Slaven Belupo",
+      "ml_/_dc": "Rijeka o Empate (86%)",
+      "goles_local": "Goles Local +1.5 (73%)",
+      "goles_visitante": "Goles Visitante -1.5 (84%)",
+      "marcador_global": "Goles +1.5 (72%)",
+      "sot": "SoT +7.5 (67%)",
+      "corners": "Corners +6.5 (66%)",
+      "tarjetas": "Tarjetas +3.5 (69%)"
+    },
+    {
+      "hora": "09:15",
+      "liga": "Rusia Cup Final Path",
+      "sem": "(A)",
+      "partido": "Dynamo Moscú vs Krasnodar",
+      "ml_/_dc": "Krasnodar o Empate (66%)",
+      "goles_local": "Goles Local +0.5 (60%)",
+      "goles_visitante": "Goles Visitante +0.5 (61%)",
+      "marcador_global": "Goles -3.5 (74%)",
+      "sot": "SoT -8.5 (69%)",
+      "corners": "Corners -10.5 (68%)",
+      "tarjetas": "Tarjetas -5.5 (72%)"
+    },
+    {
+      "hora": "10:00",
+      "liga": "Grecia Playoffs",
+      "sem": "(V)",
+      "partido": "Atromitos vs Kifisias",
+      "ml_/_dc": "Atromitos o Empate (74%)",
+      "goles_local": "Goles Local +0.5 (65%)",
+      "goles_visitante": "Goles Visitante -1.5 (79%)",
+      "marcador_global": "Goles -3.5 (75%)",
+      "sot": "SoT -8.5 (70%)",
+      "corners": "Corners -10.5 (69%)",
+      "tarjetas": "Tarjetas -5.5 (73%)"
+    },
+    {
+      "hora": "10:30",
+      "liga": "Croacia Cup SF",
+      "sem": "(V)",
+      "partido": "HNK Gorica vs Dinamo Zagreb",
+      "ml_/_dc": "Dinamo Zagreb o Empate (88%)",
+      "goles_local": "Goles Local -1.5 (82%)",
+      "goles_visitante": "Goles Visitante +1.5 (71%)",
+      "marcador_global": "Goles +1.5 (73%)",
+      "sot": "SoT +7.5 (68%)",
+      "corners": "Corners +6.5 (67%)",
+      "tarjetas": "Tarjetas +3.5 (68%)"
+    },
+    {
+      "hora": "10:45",
+      "liga": "Europa League QF",
+      "sem": "(A)",
+      "partido": "Braga vs Betis",
+      "ml_/_dc": "Betis o Empate (66%)",
+      "goles_local": "Goles Local +0.5 (61%)",
+      "goles_visitante": "Goles Visitante +0.5 (60%)",
+      "marcador_global": "Goles -3.5 (74%)",
+      "sot": "SoT -8.5 (69%)",
+      "corners": "Corners -10.5 (68%)",
+      "tarjetas": "Tarjetas -5.5 (72%)"
+    },
+    {
+      "hora": "11:45",
+      "liga": "Rusia Cup Regional SF",
+      "sem": "(A)",
+      "partido": "Zenit vs Spartak Moscú",
+      "ml_/_dc": "Zenit o Empate (79%)",
+      "goles_local": "Goles Local +1.0 (67%)",
+      "goles_visitante": "Goles Visitante -1.5 (77%)",
+      "marcador_global": "Goles -3.5 (72%)",
+      "sot": "SoT -8.5 (68%)",
+      "corners": "Corners -10.5 (67%)",
+      "tarjetas": "Tarjetas +3.5 (71%)"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions QF Ida",
+      "sem": "(A)",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "ml_/_dc": "Barcelona o Empate (82%)",
+      "goles_local": "Goles Local +0.5 (68%)",
+      "goles_visitante": "Goles Visitante -1.5 (74%)",
+      "marcador_global": "Goles -3.5 (73%)",
+      "sot": "SoT -9.5 (69%)",
+      "corners": "Corners -10.5 (67%)",
+      "tarjetas": "Tarjetas -5.5 (71%)"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions QF Ida",
+      "sem": "(A)",
+      "partido": "PSG vs Liverpool",
+      "ml_/_dc": "PSG o Empate (73%)",
+      "goles_local": "Goles Local +0.5 (66%)",
+      "goles_visitante": "Goles Visitante +0.5 (61%)",
+      "marcador_global": "Goles -3.5 (72%)",
+      "sot": "SoT -9.5 (68%)",
+      "corners": "Corners -10.5 (67%)",
+      "tarjetas": "Tarjetas -5.5 (70%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Coquimbo Unido vs Nacional",
+      "ml_/_dc": "Coquimbo o Empate (65%)",
+      "goles_local": "Goles Local +0.5 (61%)",
+      "goles_visitante": "Goles Visitante -1.5 (78%)",
+      "marcador_global": "Goles -3.5 (76%)",
+      "sot": "SoT -8.5 (70%)",
+      "corners": "Corners -10.5 (69%)",
+      "tarjetas": "Tarjetas +3.5 (68%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Deportivo Cuenca vs Santos",
+      "ml_/_dc": "Cuenca o Empate (61%)",
+      "goles_local": "Goles Local +0.5 (60%)",
+      "goles_visitante": "Goles Visitante +0.5 (58%)",
+      "marcador_global": "Goles -3.5 (75%)",
+      "sot": "SoT -8.5 (69%)",
+      "corners": "Corners -10.5 (68%)",
+      "tarjetas": "Tarjetas +3.5 (67%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Deportivo Recoleta vs San Lorenzo",
+      "ml_/_dc": "San Lorenzo o Empate (81%)",
+      "goles_local": "Goles Local -1.5 (81%)",
+      "goles_visitante": "Goles Visitante +1.0 (66%)",
+      "marcador_global": "Goles -3.5 (74%)",
+      "sot": "SoT -8.5 (68%)",
+      "corners": "Corners -10.5 (67%)",
+      "tarjetas": "Tarjetas +3.5 (70%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Deportivo Riestra vs Palestino",
+      "ml_/_dc": "Riestra o Empate (68%)",
+      "goles_local": "Goles Local +0.5 (62%)",
+      "goles_visitante": "Goles Visitante -1.5 (77%)",
+      "marcador_global": "Goles -3.5 (77%)",
+      "sot": "SoT -8.5 (71%)",
+      "corners": "Corners -10.5 (70%)",
+      "tarjetas": "Tarjetas +3.5 (69%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Mirassol vs Lanús",
+      "ml_/_dc": "Mirassol o Empate (69%)",
+      "goles_local": "Goles Local +0.5 (63%)",
+      "goles_visitante": "Goles Visitante -1.5 (76%)",
+      "marcador_global": "Goles -3.5 (75%)",
+      "sot": "SoT -8.5 (69%)",
+      "corners": "Corners -10.5 (68%)",
+      "tarjetas": "Tarjetas +3.5 (68%)"
+    },
+    {
+      "hora": "18:00",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Audax Italiano vs Olimpia Asunción",
+      "ml_/_dc": "Olimpia o Empate (66%)",
+      "goles_local": "Goles Local +0.5 (59%)",
+      "goles_visitante": "Goles Visitante +0.5 (60%)",
+      "marcador_global": "Goles -3.5 (76%)",
+      "sot": "SoT -8.5 (70%)",
+      "corners": "Corners -10.5 (69%)",
+      "tarjetas": "Tarjetas +3.5 (68%)"
+    },
+    {
+      "hora": "18:00",
+      "liga": "Libertadores J1",
+      "sem": "(A)",
+      "partido": "Independiente Medellín vs Estudiantes LP",
+      "ml_/_dc": "Estudiantes o Empate (65%)",
+      "goles_local": "Goles Local +0.5 (60%)",
+      "goles_visitante": "Goles Visitante +0.5 (58%)",
+      "marcador_global": "Goles -3.5 (75%)",
+      "sot": "SoT -8.5 (69%)",
+      "corners": "Corners -10.5 (68%)",
+      "tarjetas": "Tarjetas +3.5 (69%)"
+    },
+    {
+      "hora": "18:10",
+      "liga": "Copa Argentina",
+      "sem": "(A)",
+      "partido": "Sarmiento vs Tristán Suárez",
+      "ml_/_dc": "Sarmiento o Empate (72%)",
+      "goles_local": "Goles Local +0.5 (64%)",
+      "goles_visitante": "Goles Visitante -1.5 (81%)",
+      "marcador_global": "Goles -3.5 (78%)",
+      "sot": "SoT -8.5 (71%)",
+      "corners": "Corners -10.5 (69%)",
+      "tarjetas": "Tarjetas +3.5 (70%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Montevideo City Torque vs Grêmio",
+      "ml_/_dc": "Grêmio o Empate (74%)",
+      "goles_local": "Goles Local -1.5 (79%)",
+      "goles_visitante": "Goles Visitante +0.5 (64%)",
+      "marcador_global": "Goles -3.5 (73%)",
+      "sot": "SoT -8.5 (68%)",
+      "corners": "Corners -10.5 (67%)",
+      "tarjetas": "Tarjetas +3.5 (69%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Blooming vs River Plate",
+      "ml_/_dc": "River Plate o Empate (88%)",
+      "goles_local": "Goles Local -1.5 (84%)",
+      "goles_visitante": "Goles Visitante +1.5 (73%)",
+      "marcador_global": "Goles +1.5 (74%)",
+      "sot": "SoT +7.5 (69%)",
+      "corners": "Corners +6.5 (68%)",
+      "tarjetas": "Tarjetas +3.5 (67%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(V)",
+      "partido": "Cusco vs Flamengo",
+      "ml_/_dc": "Flamengo o Empate (81%)",
+      "goles_local": "Goles Local -1.5 (80%)",
+      "goles_visitante": "Goles Visitante +1.0 (68%)",
+      "marcador_global": "Goles -3.5 (72%)",
+      "sot": "SoT -8.5 (67%)",
+      "corners": "Corners -10.5 (68%)",
+      "tarjetas": "Tarjetas +3.5 (68%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(V)",
+      "partido": "Junior de Barranquilla vs Palmeiras",
+      "ml_/_dc": "Palmeiras o Empate (81%)",
+      "goles_local": "Goles Local -1.5 (80%)",
+      "goles_visitante": "Goles Visitante +1.0 (67%)",
+      "marcador_global": "Goles -3.5 (73%)",
+      "sot": "SoT -8.5 (68%)",
+      "corners": "Corners -10.5 (68%)",
+      "tarjetas": "Tarjetas +3.5 (69%)"
+    },
+    {
+      "hora": "20:00",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Academia Puerto Cabello vs Atlético Mineiro",
+      "ml_/_dc": "Atlético Mineiro o Empate (77%)",
+      "goles_local": "Goles Local -1.5 (80%)",
+      "goles_visitante": "Goles Visitante +1.0 (66%)",
+      "marcador_global": "Goles -3.5 (74%)",
+      "sot": "SoT -8.5 (68%)",
+      "corners": "Corners -10.5 (67%)",
+      "tarjetas": "Tarjetas +3.5 (68%)"
+    },
+    {
+      "hora": "20:00",
+      "liga": "Libertadores J1",
+      "sem": "(A)",
+      "partido": "Sporting Cristal vs Cerro Porteño",
+      "ml_/_dc": "Cerro Porteño o Empate (64%)",
+      "goles_local": "Goles Local +0.5 (62%)",
+      "goles_visitante": "Goles Visitante +0.5 (59%)",
+      "marcador_global": "Goles -3.5 (76%)",
+      "sot": "SoT -8.5 (70%)",
+      "corners": "Corners -10.5 (69%)",
+      "tarjetas": "Tarjetas +3.5 (68%)"
+    },
+    {
+      "hora": "Tabla 4 — Combinadas de baja varianza",
+      "liga": "",
+      "sem": "",
+      "partido": "",
+      "ml_/_dc": "",
+      "goles_local": "",
+      "goles_visitante": "",
+      "marcador_global": "",
+      "sot": "",
+      "corners": "",
+      "tarjetas": ""
+    },
+    {
+      "hora": "Tabla 5 — Goles probables",
+      "liga": "",
+      "sem": "",
+      "partido": "",
+      "ml_/_dc": "",
+      "goles_local": "",
+      "goles_visitante": "",
+      "marcador_global": "",
+      "sot": "",
+      "corners": "",
+      "tarjetas": ""
+    },
+    {
+      "hora": "Tabla 6 — Top valor estadístico",
+      "liga": "",
+      "sem": "",
+      "partido": "",
+      "ml_/_dc": "",
+      "goles_local": "",
+      "goles_visitante": "",
+      "marcador_global": "",
+      "sot": "",
+      "corners": "",
+      "tarjetas": ""
+    }
+  ],
+  "ultra": [
+    {
+      "hora": "08:30",
+      "liga": "Croacia Cup SF",
+      "sem": "(V)",
+      "partido": "Rijeka vs Slaven Belupo",
+      "pick": "Rijeka o Empate (86%)",
+      "goles_local": "Goles Local +1.5 (73%)",
+      "goles_visitante": "Goles Visitante -1.5 (84%)",
+      "marcador_global": "Goles +1.5 (72%)"
+    },
+    {
+      "hora": "10:30",
+      "liga": "Croacia Cup SF",
+      "sem": "(V)",
+      "partido": "HNK Gorica vs Dinamo Zagreb",
+      "pick": "Dinamo Zagreb o Empate (88%)",
+      "goles_local": "Goles Local -1.5 (82%)",
+      "goles_visitante": "Goles Visitante +1.5 (71%)",
+      "marcador_global": "Goles +1.5 (73%)"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions QF Ida",
+      "sem": "(A)",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "pick": "Barcelona o Empate (82%)",
+      "goles_local": "Goles Local +0.5 (68%)",
+      "goles_visitante": "Goles Visitante -1.5 (74%)",
+      "marcador_global": "Goles -3.5 (73%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Deportivo Recoleta vs San Lorenzo",
+      "pick": "San Lorenzo o Empate (81%)",
+      "goles_local": "Goles Local -1.5 (81%)",
+      "goles_visitante": "Goles Visitante +1.0 (66%)",
+      "marcador_global": "Goles -3.5 (74%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Blooming vs River Plate",
+      "pick": "River Plate o Empate (88%)",
+      "goles_local": "Goles Local -1.5 (84%)",
+      "goles_visitante": "Goles Visitante +1.5 (73%)",
+      "marcador_global": "Goles +1.5 (74%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(V)",
+      "partido": "Cusco vs Flamengo",
+      "pick": "Flamengo o Empate (81%)",
+      "goles_local": "Goles Local -1.5 (80%)",
+      "goles_visitante": "Goles Visitante +1.0 (68%)",
+      "marcador_global": "Goles -3.5 (72%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(V)",
+      "partido": "Junior vs Palmeiras",
+      "pick": "Palmeiras o Empate (81%)",
+      "goles_local": "Goles Local -1.5 (80%)",
+      "goles_visitante": "Goles Visitante +1.0 (67%)",
+      "marcador_global": "Goles -3.5 (73%)"
+    },
+    {
+      "hora": "20:00",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Puerto Cabello vs Atlético Mineiro",
+      "pick": "Atlético Mineiro o Empate (77%)",
+      "goles_local": "Goles Local -1.5 (80%)",
+      "goles_visitante": "Goles Visitante +1.0 (66%)",
+      "marcador_global": "Goles -3.5 (74%)"
+    }
+  ],
+  "stakes": [
+    {
+      "hora": "08:30",
+      "liga": "Croacia Cup SF",
+      "sem": "(V)",
+      "partido": "Rijeka vs Slaven Belupo",
+      "pick": "Rijeka o Empate (86%)",
+      "stake": "2026-10-09 00: 00: 00"
+    },
+    {
+      "hora": "10:30",
+      "liga": "Croacia Cup SF",
+      "sem": "(V)",
+      "partido": "HNK Gorica vs Dinamo Zagreb",
+      "pick": "Dinamo Zagreb o Empate (88%)",
+      "stake": "2026-10-10 00: 00: 00"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions QF Ida",
+      "sem": "(A)",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "pick": "Barcelona o Empate (82%)",
+      "stake": "2026-10-08 00: 00: 00"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Deportivo Recoleta vs San Lorenzo",
+      "pick": "San Lorenzo o Empate (81%)",
+      "stake": "2026-10-08 00: 00: 00"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Blooming vs River Plate",
+      "pick": "River Plate o Empate (88%)",
+      "stake": "2026-10-10 00: 00: 00"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(V)",
+      "partido": "Cusco vs Flamengo",
+      "pick": "Flamengo o Empate (81%)",
+      "stake": "2026-10-08 00: 00: 00"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(V)",
+      "partido": "Junior vs Palmeiras",
+      "pick": "Palmeiras o Empate (81%)",
+      "stake": "2026-10-08 00: 00: 00"
+    },
+    {
+      "hora": "20:00",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Puerto Cabello vs Atlético Mineiro",
+      "pick": "Atlético Mineiro o Empate (77%)",
+      "stake": "2026-10-07 00: 00: 00"
+    }
+  ],
+  "combinadas": [
+    {
+      "hora": "08:30 / 10:30",
+      "liga": "Croacia Cup",
+      "sem": "(V)",
+      "combinada": "Rijeka o Empate + Dinamo Zagreb o Empate",
+      "prob.": 0.77
+    },
+    {
+      "hora": "13:00 / 18:30",
+      "liga": "Champions + Sudamericana",
+      "sem": "(V)",
+      "combinada": "Barcelona o Empate + River Plate o Empate",
+      "prob.": 0.73
+    },
+    {
+      "hora": "16:00 / 18:30",
+      "liga": "Sudamericana + Libertadores",
+      "sem": "(V)",
+      "combinada": "San Lorenzo o Empate + Flamengo o Empate",
+      "prob.": 0.71
+    },
+    {
+      "hora": "18:30 / 18:30",
+      "liga": "Libertadores",
+      "sem": "(V)",
+      "combinada": "Flamengo o Empate + Palmeiras o Empate",
+      "prob.": 0.72
+    },
+    {
+      "hora": "18:30 / 20:00",
+      "liga": "Sudamericana + Sudamericana",
+      "sem": "(V)",
+      "combinada": "River Plate o Empate + Atlético Mineiro o Empate",
+      "prob.": 0.74
+    }
+  ],
+  "goles": [
+    {
+      "hora": "07:00",
+      "liga": "Grecia Playoffs",
+      "sem": "(A)",
+      "partido": "AEL 1964 vs Panaitolikos",
+      "pick": "Goles -3.5 (76%)"
+    },
+    {
+      "hora": "08:00",
+      "liga": "Grecia Playoffs",
+      "sem": "(A)",
+      "partido": "Panserraikos vs Asteras Tripolis",
+      "pick": "Goles -3.5 (77%)"
+    },
+    {
+      "hora": "09:15",
+      "liga": "Rusia Cup",
+      "sem": "(A)",
+      "partido": "Dynamo Moscú vs Krasnodar",
+      "pick": "Goles -3.5 (74%)"
+    },
+    {
+      "hora": "10:00",
+      "liga": "Grecia Playoffs",
+      "sem": "(A)",
+      "partido": "Atromitos vs Kifisias",
+      "pick": "Goles -3.5 (75%)"
+    },
+    {
+      "hora": "10:45",
+      "liga": "Europa League QF",
+      "sem": "(A)",
+      "partido": "Braga vs Betis",
+      "pick": "Goles -3.5 (74%)"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions QF Ida",
+      "sem": "(A)",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "pick": "Goles -3.5 (73%)"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions QF Ida",
+      "sem": "(A)",
+      "partido": "PSG vs Liverpool",
+      "pick": "Goles -3.5 (72%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Coquimbo Unido vs Nacional",
+      "pick": "Goles -3.5 (76%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(A)",
+      "partido": "Deportivo Riestra vs Palestino",
+      "pick": "Goles -3.5 (77%)"
+    },
+    {
+      "hora": "18:10",
+      "liga": "Copa Argentina",
+      "sem": "(A)",
+      "partido": "Sarmiento vs Tristán Suárez",
+      "pick": "Goles -3.5 (78%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(A)",
+      "partido": "Junior vs Palmeiras",
+      "pick": "Goles -3.5 (73%)"
+    },
+    {
+      "hora": "20:00",
+      "liga": "Libertadores J1",
+      "sem": "(A)",
+      "partido": "Sporting Cristal vs Cerro Porteño",
+      "pick": "Goles -3.5 (76%)"
+    }
+  ],
+  "top": [
+    {
+      "hora": "08:30",
+      "liga": "Croacia Cup SF",
+      "sem": "(V)",
+      "partido": "Rijeka vs Slaven Belupo",
+      "pick": "Rijeka o Empate (86%)"
+    },
+    {
+      "hora": "10:30",
+      "liga": "Croacia Cup SF",
+      "sem": "(V)",
+      "partido": "HNK Gorica vs Dinamo Zagreb",
+      "pick": "Dinamo Zagreb o Empate (88%)"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions QF Ida",
+      "sem": "(A)",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "pick": "Barcelona o Empate (82%)"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Deportivo Recoleta vs San Lorenzo",
+      "pick": "San Lorenzo o Empate (81%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Blooming vs River Plate",
+      "pick": "River Plate o Empate (88%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(V)",
+      "partido": "Cusco vs Flamengo",
+      "pick": "Flamengo o Empate (81%)"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores J1",
+      "sem": "(V)",
+      "partido": "Junior vs Palmeiras",
+      "pick": "Palmeiras o Empate (81%)"
+    },
+    {
+      "hora": "20:00",
+      "liga": "Sudamericana J1",
+      "sem": "(V)",
+      "partido": "Puerto Cabello vs Atlético Mineiro",
+      "pick": "Atlético Mineiro o Empate (77%)"
+    }
+  ],
+  "alta_confianza": [
+    {
+      "hora": "13:00",
+      "liga": "Champions League",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "prediccion_1": "Barcelona Gana o Empate",
+      "prediccion_2": "Goles Totales +1.5"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions League",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "prediccion_1": "Goles Totales: -3.5",
+      "prediccion_2": ""
+    },
+    {
+      "hora": "16:00",
+      "liga": "Copa Suramericana",
+      "partido": "Recoleta vs San Lorenzo",
+      "prediccion_1": "San Lorenzo Gana o Empate",
+      "prediccion_2": "Goles Totales -3.5"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Copa Suramericana",
+      "partido": "Blooming vs River Plate",
+      "prediccion_1": "River Plate Gana o Empate",
+      "prediccion_2": "River Plate Goles: +0.5"
+    }
+  ],
+  "public": [
+    {
+      "hora": "13:00",
+      "liga": "Champions League",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "prediccion_1": "Goles Totales: -5.5",
+      "#_combinación": "C1"
+    },
+    {
+      "hora": "13:00",
+      "liga": "Champions League",
+      "partido": "Barcelona vs Atlético de Madrid",
+      "prediccion_1": "Barcelona Goles: -3.5",
+      "#_combinación": "C2"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Copa Suramericana",
+      "partido": "Recoleta VS San Lorenzo",
+      "prediccion_1": "1a Mitad Goles: -1.5",
+      "#_combinación": "C1"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Copa Suramericana",
+      "partido": "Recoleta VS San Lorenzo",
+      "prediccion_1": "Goles Totales: -3.5",
+      "#_combinación": "C2"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Copa Suramericana",
+      "partido": "Recoleta VS San Lorenzo",
+      "prediccion_1": "1a Mitad Goles: -1.5",
+      "#_combinación": "C3"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Copa Suramericana",
+      "partido": "Blooming vs River Plate",
+      "prediccion_1": "Goles Totales: +1.5",
+      "#_combinación": "C3"
+    }
+  ]
+>>>>>>> 8939051425474de8539e4f8eb18b1c6c0e78b429
 }
