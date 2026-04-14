@@ -1,14 +1,4 @@
 {
-
-  "public": [],
-  "general": [],
-  "ultra": [],
-  "stakes": [],
-  "combinadas": [],
-  "goles": [],
-  "top": [],
-  "alta_confianza": []
-=======
   "date": "2026-04-08",
   "source_file": "Fut 080426.xlsx",
   "generated_at": "2026-04-08T13:41:58",
@@ -324,45 +314,6 @@
       "sot": "SoT -8.5 (70%)",
       "corners": "Corners -10.5 (69%)",
       "tarjetas": "Tarjetas +3.5 (68%)"
-    },
-    {
-      "hora": "Tabla 4 — Combinadas de baja varianza",
-      "liga": "",
-      "sem": "",
-      "partido": "",
-      "ml_/_dc": "",
-      "goles_local": "",
-      "goles_visitante": "",
-      "marcador_global": "",
-      "sot": "",
-      "corners": "",
-      "tarjetas": ""
-    },
-    {
-      "hora": "Tabla 5 — Goles probables",
-      "liga": "",
-      "sem": "",
-      "partido": "",
-      "ml_/_dc": "",
-      "goles_local": "",
-      "goles_visitante": "",
-      "marcador_global": "",
-      "sot": "",
-      "corners": "",
-      "tarjetas": ""
-    },
-    {
-      "hora": "Tabla 6 — Top valor estadístico",
-      "liga": "",
-      "sem": "",
-      "partido": "",
-      "ml_/_dc": "",
-      "goles_local": "",
-      "goles_visitante": "",
-      "marcador_global": "",
-      "sot": "",
-      "corners": "",
-      "tarjetas": ""
     }
   ],
   "ultra": [
@@ -768,5 +719,4 @@
       "#_combinación": "C3"
     }
   ]
->>>>>>> 8939051425474de8539e4f8eb18b1c6c0e78b429
 }
