@@ -1,7 +1,7 @@
 {
   "date": "2026-04-16",
   "source_file": "Fut 160426.xlsx",
-  "generated_at": "2026-04-16T10:42:25",
+  "generated_at": "2026-04-16T14:04:11",
   "general": [
     {
       "hora": "10:45",
@@ -34,9 +34,9 @@
     {
       "hora": "13:00",
       "liga": "Europa League",
-      "sem": "(V)",
-      "partido": "Aston Villa vs Bologna",
-      "ml_prob": "Aston Villa o Empate (86%)",
+      "sem": "Aston Villa vs Bologna",
+      "partido": "Aston Villa Gana o Empate (86%)",
+      "ml_prob": "Aston Villa Goles: +0.5",
       "goles_local": "Goles Local +0.5 (80%)",
       "goles_visitante": "Goles Visitante -1.5 (79%)",
       "marcador_global": "Goles -3.5 (67%)",
@@ -188,20 +188,6 @@
     {
       "hora": "18:30",
       "liga": "Libertadores",
-      "sem": "(V)",
-      "partido": "Flamengo vs Independiente Medellín",
-      "ml_prob": "Flamengo o Empate (91%)",
-      "goles_local": "Goles Local +1.5 (71%)",
-      "goles_visitante": "Goles Visitante -1.5 (76%)",
-      "marcador_global": "Goles +1.5 (79%)",
-      "mitades": "1T +0.5 (62%) | 2T +0.5 (68%)",
-      "sot": "SoT +8.5 (71%)",
-      "corners": "Corners +8.5 (66%)",
-      "tarjetas": "Tarjetas +4.5 (61%)"
-    },
-    {
-      "hora": "18:30",
-      "liga": "Libertadores",
       "sem": "(A)",
       "partido": "Peñarol vs CA Platense",
       "ml_prob": "Peñarol o Empate (78%)",
@@ -268,6 +254,20 @@
       "sot": "SoT -8.5 (58%)",
       "corners": "Corners +7.5 (57%)",
       "tarjetas": "Tarjetas +4.5 (62%)"
+    },
+    {
+      "hora": "",
+      "liga": "",
+      "sem": "",
+      "partido": "",
+      "ml_prob": "",
+      "goles_local": "Goles Local +1.5 (71%)",
+      "goles_visitante": "Goles Visitante -1.5 (76%)",
+      "marcador_global": "Goles +1.5 (79%)",
+      "mitades": "1T +0.5 (62%) | 2T +0.5 (68%)",
+      "sot": "SoT +8.5 (71%)",
+      "corners": "Corners +8.5 (66%)",
+      "tarjetas": "Tarjetas +4.5 (61%)"
     }
   ],
   "ultra": [
@@ -401,35 +401,35 @@
       "liga": "Mixta",
       "sem": "(A)",
       "combinada": "Rayo Vallecano o Empate (80%) + Real Betis o Empate (79%)",
-      "prob.": 0.69
+      "probabilidad": 0.69
     },
     {
       "hora": "16:00",
       "liga": "Mixta",
       "sem": "(V)",
       "combinada": "Palmeiras o Empate (92%) + Flamengo o Empate (91%)",
-      "prob.": 0.84
+      "probabilidad": 0.84
     },
     {
       "hora": "16:00",
       "liga": "Mixta",
       "sem": "(V)",
       "combinada": "Atlético Mineiro o Empate (90%) + Bragantino o Empate (91%)",
-      "prob.": 0.82
+      "probabilidad": 0.82
     },
     {
       "hora": "16:00",
       "liga": "Mixta",
       "sem": "(V)",
       "combinada": "Lanús o Empate (90%) + Cienciano o Empate (84%)",
-      "prob.": 0.79
+      "probabilidad": 0.79
     },
     {
       "hora": "16:00",
       "liga": "Mixta",
       "sem": "(A)",
       "combinada": "Tigre Goles -3.5 (76%) + San Lorenzo Goles -3.5 (77%)",
-      "prob.": 0.64
+      "probabilidad": 0.64
     }
   ],
   "goles": [
@@ -602,5 +602,71 @@
       "confiabilidad_final": 0.85
     }
   ],
-  "public": []
+  "public": [
+    {
+      "hora": "13:00",
+      "liga": "Europa League",
+      "partido": "Aston Villa vs Bologna",
+      "prediccion_1": "Aston Villa Gana o Empate (86%)",
+      "prediccion_2": "Aston Villa Goles: +0.5"
+    },
+    {
+      "hora": "16:00",
+      "liga": "Libertadores",
+      "partido": "Palmeiras vs Sporting Cristal",
+      "prediccion_1": "Palmeiras o Empate (92%)",
+      "prediccion_2": "Goles totales: +1.5"
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores",
+      "partido": "Flamengo vs Independiente Medellín",
+      "prediccion_1": "Flamengo o Empate (91%)",
+      "prediccion_2": "Medellin Handicap: +3.5"
+    }
+  ],
+  "inferno": [
+    {
+      "hora": "13:00",
+      "liga": "Europa League",
+      "partido": "Aston Villa vs Bologna",
+      "prediccion_1": "Aston Villa Goles: +0.5",
+      "combinada": 1
+    },
+    {
+      "hora": "13:00",
+      "liga": "Europa League",
+      "partido": "Aston Villa vs Bologna",
+      "prediccion_1": "Goles totales: +1.5",
+      "combinada": 2
+    },
+    {
+      "hora": "13:00",
+      "liga": "Europa League",
+      "partido": "Aston Villa vs Bologna",
+      "prediccion_1": "Goles totales: +1.5",
+      "combinada": 3
+    },
+    {
+      "hora": "16:00",
+      "liga": "Libertadores",
+      "partido": "Palmeiras vs Sporting Cristal",
+      "prediccion_1": "Goles totales: +1.5",
+      "combinada": 1
+    },
+    {
+      "hora": "16:00",
+      "liga": "Libertadores",
+      "partido": "Palmeiras vs Sporting Cristal",
+      "prediccion_1": "Sporting Cristal Handicap: +1.5",
+      "combinada": 3
+    },
+    {
+      "hora": "18:30",
+      "liga": "Libertadores",
+      "partido": "Flamengo vs Independiente Medellín",
+      "prediccion_1": "Medellina Handicap: +3.5",
+      "combinada": 2
+    }
+  ]
 }
