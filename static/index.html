@@ -747,6 +747,7 @@
         <button class="premium-tab-btn" onclick="showPremiumTab('goles', this)">Goles</button>
         <button class="premium-tab-btn" onclick="showPremiumTab('top', this)">Top valor</button>
         <button class="premium-tab-btn confidence-tab" onclick="showPremiumTab('alta_confianza', this)">Alta confianza</button>
+        <button class="premium-tab-btn" onclick="showPremiumTab('inferno', this)">ProHeat Inferno</button>
       </div>
 
       <div class="premium-content-box">
@@ -835,7 +836,8 @@
       combinadas: "Combinadas cargadas desde /api/data/combinadas.",
       goles: "Goles cargados desde /api/data/goles.",
       top: "Top valor cargado desde /api/data/top.",
-      alta_confianza: "Alta confianza cargada desde /api/data/alta-confianza."
+      alta_confianza: "Equipos de más confianza cargados desde /api/data/alta-confianza.",
+      inferno: "Combinadas ProHeat Inferno cargadas desde /api/data/inferno."
     };
 
     function scrollToAuth() {
@@ -938,16 +940,7 @@
         const title = row.partido || row.combinada || "Registro";
         const meta = `${row.hora || "Hora"} · ${row.liga || "Liga"}`;
 
-        if (type === "alta") {
-          html += `
-            <div class="mini-card">
-              <div class="mini-card-meta">${escapeHtml(meta)}</div>
-              <div class="mini-card-title">${escapeHtml(title)}</div>
-              <div class="mini-card-line">${escapeHtml(row.prediccion_1 || "")}</div>
-              ${row.prediccion_2 ? `<div class="mini-card-line" style="color:#ffbf66; margin-top:6px;">${escapeHtml(row.prediccion_2)}</div>` : ""}
-            </div>
-          `;
-        } else if (type === "stakes") {
+        if (type === "stakes") {
           html += `
             <div class="mini-card">
               <div class="mini-card-meta">${escapeHtml(meta)} · Stake: ${escapeHtml(row.stake || "N/A")}</div>
@@ -963,12 +956,20 @@
               <div class="mini-card-line">${escapeHtml(row.probabilidad || "")}</div>
             </div>
           `;
+        } else if (type === "inferno") {
+          html += `
+            <div class="mini-card">
+              <div class="mini-card-meta">${escapeHtml(meta)} · ${escapeHtml(row.combinada || "Inferno")}</div>
+              <div class="mini-card-title">${escapeHtml(row.partido || "Partido")}</div>
+              <div class="mini-card-line">${escapeHtml(row.prediccion_1 || "")}</div>
+            </div>
+          `;
         } else {
           html += `
             <div class="mini-card">
               <div class="mini-card-meta">${escapeHtml(meta)}</div>
               <div class="mini-card-title">${escapeHtml(title)}</div>
-              <div class="mini-card-line">${escapeHtml(row.pick || row.prediccion_1 || row.ml_prob || "")}</div>
+              <div class="mini-card-line">${escapeHtml(row.pick || row.prediccion_1 || row.ml_prob || row.ml || "")}</div>
             </div>
           `;
         }
@@ -1011,6 +1012,7 @@
         premiumApiData.goles = await fetchDataSection("/api/data/goles");
         premiumApiData.top = await fetchDataSection("/api/data/top");
         premiumApiData.alta_confianza = await fetchDataSection("/api/data/alta-confianza");
+        premiumApiData.inferno = await fetchDataSection("/api/data/inferno");
       } catch (error) {
         console.error("Error cargando premium desde la API:", error);
       }
@@ -1029,14 +1031,16 @@
 
       if (section === "general") {
         content.innerHTML = renderTable(rows);
+      } else if (section === "alta_confianza") {
+        content.innerHTML = renderTable(rows);
       } else if (section === "ultra" || section === "goles" || section === "top") {
         content.innerHTML = renderMiniCards(rows, "simple");
       } else if (section === "stakes") {
         content.innerHTML = renderMiniCards(rows, "stakes");
       } else if (section === "combinadas") {
         content.innerHTML = renderMiniCards(rows, "combinadas");
-      } else if (section === "alta_confianza") {
-        content.innerHTML = renderMiniCards(rows, "alta");
+      } else if (section === "inferno") {
+        content.innerHTML = renderMiniCards(rows, "inferno");
       } else {
         content.innerHTML = `<div class="premium-note">Sin contenido.</div>`;
       }
