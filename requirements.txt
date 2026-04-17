@@ -1,5 +1,6 @@
 fastapi
-uvicorn[standard]
+uvicorn
+pydantic[email]
 python-multipart
-pydantic
-email-validator
+pandas
+openpyxl
