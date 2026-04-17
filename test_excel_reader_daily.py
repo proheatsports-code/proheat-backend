@@ -15,6 +15,10 @@ DEFAULT_FILE_PATH = Path(
     r"C:\Users\Usuario\Documents\Data Insights Enterprise\Sporstats\Picks por IA\Futbol\Fut 160426.xlsx"
 )
 
+DEFAULT_OUTPUT_DIR = Path(
+    r"C:\Users\Usuario\Documents\Data Insights Enterprise\Sporstats\Web Proheat Sports\proheat-backend\proheat_data"
+)
+
 SHEETS = {
     "general": "Hoja1",
     "ultra": "Hoja2",
@@ -34,7 +38,7 @@ COLUMN_ALIASES = {
     "sem": "sem",
     "partido": "partido",
 
-    # predicciones públicas / inferno
+    # predicciones
     "prediccion_1": "prediccion_1",
     "predicción_1": "prediccion_1",
     "prediccion 1": "prediccion_1",
@@ -69,7 +73,7 @@ COLUMN_ALIASES = {
     "pick_1": "pick_1",
     "pick_2": "pick_2",
 
-    # hoja 7 alta confianza
+    # hoja 7
     "rank": "rank",
     "equipo": "equipo",
     "goles": "goles",
@@ -85,6 +89,9 @@ TEXT_REPLACEMENTS = {
 }
 
 
+# =========================================================
+# HELPERS
+# =========================================================
 def get_input_file() -> Path:
     if len(sys.argv) > 1:
         return Path(sys.argv[1])
@@ -207,8 +214,12 @@ def preview_records(title: str, records: list[dict[str, Any]], limit: int = 3) -
         print(row)
 
 
+# =========================================================
+# CORE LOGIC
+# =========================================================
 def build_daily_payload(file_path: Path) -> dict[str, Any]:
     prediction_date = extract_date_from_filename(file_path)
+
     payload: dict[str, Any] = {
         "date": prediction_date,
         "source_file": file_path.name,
@@ -243,22 +254,51 @@ def save_daily_payload(
     return daily_path, latest_path
 
 
+def process_excel_to_json(
+    file_path: Path,
+    base_output_dir: Path
+) -> dict[str, Any]:
+    """
+    Función reutilizable para usar desde backend.py o desde cualquier otro script.
+    Procesa el Excel, genera el payload y actualiza:
+    - history/predictions_YYYY-MM-DD.json
+    - latest.json
+    """
+    if not file_path.exists():
+        raise FileNotFoundError(f"No se encontró el archivo Excel: {file_path}")
+
+    history_dir = base_output_dir / "history"
+    ensure_dirs(base_output_dir, history_dir)
+
+    payload = build_daily_payload(file_path)
+    daily_path, latest_path = save_daily_payload(payload, base_output_dir, history_dir)
+
+    return {
+        "ok": True,
+        "date": payload.get("date"),
+        "source_file": payload.get("source_file"),
+        "generated_at": payload.get("generated_at"),
+        "daily_path": str(daily_path),
+        "latest_path": str(latest_path),
+        "counts": {key: len(payload.get(key, [])) for key in SHEETS.keys()},
+        "payload": payload,
+    }
+
+
+# =========================================================
+# CLI
+# =========================================================
 def main() -> None:
     file_path = get_input_file()
+    base_output_dir = DEFAULT_OUTPUT_DIR
 
     if not file_path.exists():
         raise FileNotFoundError(f"No se encontró el archivo: {file_path}")
 
-    base_output_dir = Path(
-        r"C:\Users\Usuario\Documents\Data Insights Enterprise\Sporstats\Web Proheat Sports\proheat-backend\proheat_data"
-    )
-    history_dir = base_output_dir / "history"
-    ensure_dirs(base_output_dir, history_dir)
-
     print(f"[OK] Excel usado: {file_path.name}")
 
-    payload = build_daily_payload(file_path)
-    daily_path, latest_path = save_daily_payload(payload, base_output_dir, history_dir)
+    result = process_excel_to_json(file_path, base_output_dir)
+    payload = result["payload"]
 
     preview_records("PUBLIC (Hoja8)", payload["public"], limit=5)
     preview_records("GENERAL (Hoja1)", payload["general"], limit=3)
@@ -271,11 +311,11 @@ def main() -> None:
     preview_records("INFERNO (Hoja9)", payload["inferno"], limit=3)
 
     print("\nResumen:")
-    for key in SHEETS.keys():
-        print(f"- {key}: {len(payload.get(key, []))} registros")
+    for key, count in result["counts"].items():
+        print(f"- {key}: {count} registros")
 
-    print(f"\n[OK] Histórico diario guardado en: {daily_path}")
-    print(f"[OK] latest.json actualizado en: {latest_path}")
+    print(f"\n[OK] Histórico diario guardado en: {result['daily_path']}")
+    print(f"[OK] latest.json actualizado en: {result['latest_path']}")
 
 
 if __name__ == "__main__":
