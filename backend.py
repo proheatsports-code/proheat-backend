@@ -15,6 +15,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, EmailStr
 
+from test_excel_reader_daily import process_excel_to_json
+
+# =========================
+# CONFIG
+# =========================
+
 APP_NAME = "ProHeat Sports Backend"
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -22,6 +28,7 @@ DATA_DIR = Path(os.getenv("PROHEAT_DATA_DIR", BASE_DIR / "proheat_data"))
 STATIC_DIR = Path(os.getenv("PROHEAT_STATIC_DIR", BASE_DIR / "static"))
 UPLOADS_DIR = Path(os.getenv("PROHEAT_UPLOADS_DIR", BASE_DIR / "proof_uploads"))
 DB_PATH = Path(os.getenv("PROHEAT_DB_PATH", BASE_DIR / "proheat.db"))
+TEMP_UPLOADS_DIR = Path(os.getenv("PROHEAT_TEMP_UPLOADS_DIR", BASE_DIR / "temp_uploads"))
 
 DEFAULT_SUPERADMIN_NAME = os.getenv("DEFAULT_SUPERADMIN_NAME", "ProHeat Master Admin")
 DEFAULT_SUPERADMIN_EMAIL = os.getenv("DEFAULT_SUPERADMIN_EMAIL", "admin@proheatsports.com")
@@ -32,6 +39,11 @@ PASSWORD_ITERATIONS = 120_000
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+TEMP_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+# =========================
+# FASTAPI
+# =========================
 
 app = FastAPI(title=APP_NAME)
 
@@ -43,14 +55,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# =========================
+# UTILS
+# =========================
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
-
 def iso_now() -> str:
     return now_utc().isoformat()
-
 
 def parse_dt(value: Optional[str]) -> Optional[datetime]:
     if not value:
@@ -59,7 +72,6 @@ def parse_dt(value: Optional[str]) -> Optional[datetime]:
         return datetime.fromisoformat(value)
     except Exception:
         return None
-
 
 def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
     salt = salt or secrets.token_hex(16)
@@ -71,21 +83,17 @@ def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
     ).hex()
     return hashed, salt
 
-
 def verify_password(password: str, stored_hash: str, salt: str) -> bool:
     calc_hash, _ = hash_password(password, salt)
     return secrets.compare_digest(calc_hash, stored_hash)
 
-
 def create_token() -> str:
     return secrets.token_urlsafe(48)
-
 
 def db_connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
-
 
 def normalize_membership_status(end_date: Optional[str]) -> str:
     if not end_date:
@@ -95,12 +103,15 @@ def normalize_membership_status(end_date: Optional[str]) -> str:
         return "pending"
     return "active" if dt > now_utc() else "expired"
 
-
 def ensure_dirs() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    TEMP_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
+# =========================
+# DB INIT
+# =========================
 
 def init_db() -> None:
     ensure_dirs()
@@ -164,7 +175,6 @@ def init_db() -> None:
     conn.commit()
     conn.close()
 
-
 def create_default_superadmin() -> None:
     conn = db_connect()
     cur = conn.cursor()
@@ -202,53 +212,50 @@ def create_default_superadmin() -> None:
     conn.commit()
     conn.close()
 
-
 def boot() -> None:
     init_db()
     create_default_superadmin()
 
-
 boot()
 
+# =========================
+# SCHEMAS
+# =========================
 
 class RegisterIn(BaseModel):
     name: str
     email: EmailStr
     password: str
 
-
 class LoginIn(BaseModel):
     email: EmailStr
     password: str
-
 
 class AdminCreateSubadminIn(BaseModel):
     name: str
     email: EmailStr
     password: str
 
-
 class ApproveMembershipIn(BaseModel):
     user_id: str
     days: int
 
-
 class DeleteRequestIn(BaseModel):
     request_id: str
-
 
 class ExtendMembershipIn(BaseModel):
     user_id: str
     days: int
 
-
 class ExpireMembershipIn(BaseModel):
     user_id: str
-
 
 class DeleteUserIn(BaseModel):
     user_id: str
 
+# =========================
+# AUTH HELPERS
+# =========================
 
 def get_token_from_header(authorization: Optional[str]) -> str:
     if not authorization:
@@ -256,7 +263,6 @@ def get_token_from_header(authorization: Optional[str]) -> str:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Formato de token inválido.")
     return authorization.replace("Bearer ", "", 1).strip()
-
 
 def get_session_user_by_token(token: str) -> dict[str, Any]:
     conn = db_connect()
@@ -280,11 +286,9 @@ def get_session_user_by_token(token: str) -> dict[str, Any]:
 
     return dict(row)
 
-
 def require_logged_user(authorization: Optional[str] = Header(None)) -> dict[str, Any]:
     token = get_token_from_header(authorization)
     return get_session_user_by_token(token)
-
 
 def require_admin(authorization: Optional[str] = Header(None)) -> dict[str, Any]:
     user = require_logged_user(authorization)
@@ -293,13 +297,11 @@ def require_admin(authorization: Optional[str] = Header(None)) -> dict[str, Any]
         raise HTTPException(status_code=403, detail="Permisos insuficientes.")
     return user
 
-
 def require_superadmin(authorization: Optional[str] = Header(None)) -> dict[str, Any]:
     user = require_logged_user(authorization)
     if user.get("role") != "superadmin":
         raise HTTPException(status_code=403, detail="Solo el superadministrador puede hacer esta acción.")
     return user
-
 
 def write_admin_log(admin_user_id: str, action: str, target_user_id: Optional[str] = None, details: Optional[str] = None) -> None:
     conn = db_connect()
@@ -311,13 +313,15 @@ def write_admin_log(admin_user_id: str, action: str, target_user_id: Optional[st
     conn.commit()
     conn.close()
 
+# =========================
+# STATIC / FILES
+# =========================
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 if UPLOADS_DIR.exists():
     app.mount("/proofs", StaticFiles(directory=str(UPLOADS_DIR)), name="proofs")
-
 
 @app.get("/", response_model=None)
 def root():
@@ -326,7 +330,6 @@ def root():
         return FileResponse(index_path)
     return JSONResponse({"message": "Backend ProHeat activo."})
 
-
 @app.get("/admin", response_model=None)
 def admin_page():
     admin_path = STATIC_DIR / "admin.html"
@@ -334,6 +337,9 @@ def admin_page():
         return FileResponse(admin_path)
     return JSONResponse({"message": "Sube admin.html a la carpeta static."})
 
+# =========================
+# PUBLIC / USER AUTH
+# =========================
 
 @app.post("/register")
 def register_user(payload: RegisterIn):
@@ -376,7 +382,6 @@ def register_user(payload: RegisterIn):
         "message": "Cuenta creada correctamente.",
         "user_id": user_id
     }
-
 
 @app.post("/login")
 def login_user(payload: LoginIn):
@@ -422,7 +427,6 @@ def login_user(payload: LoginIn):
         "status": membership_status
     }
 
-
 @app.get("/membership/{user_id}")
 def get_membership(user_id: str):
     conn = db_connect()
@@ -444,7 +448,6 @@ def get_membership(user_id: str):
         "start_date": user["membership_start"],
         "end_date": user["membership_end"]
     }
-
 
 @app.post("/upload-proof/{user_id}")
 async def upload_proof(user_id: str, file: UploadFile = File(...)):
@@ -494,6 +497,9 @@ async def upload_proof(user_id: str, file: UploadFile = File(...)):
         "proof_url": proof_url
     }
 
+# =========================
+# ADMIN AUTH / DATA
+# =========================
 
 @app.post("/admin/login")
 def admin_login(payload: LoginIn):
@@ -535,7 +541,6 @@ def admin_login(payload: LoginIn):
         "email": user["email"],
         "role": user["role"]
     }
-
 
 @app.post("/admin/create-subadmin")
 def create_subadmin(payload: AdminCreateSubadminIn, admin=Depends(require_superadmin)):
@@ -588,7 +593,6 @@ def create_subadmin(payload: AdminCreateSubadminIn, admin=Depends(require_supera
         "role": "subadmin"
     }
 
-
 @app.get("/admin/pending-requests")
 def admin_pending_requests(admin=Depends(require_admin)):
     conn = db_connect()
@@ -614,7 +618,6 @@ def admin_pending_requests(admin=Depends(require_admin)):
     items = [dict(row) for row in cur.fetchall()]
     conn.close()
     return {"items": items}
-
 
 @app.get("/admin/users")
 def admin_users(admin=Depends(require_admin)):
@@ -645,7 +648,6 @@ def admin_users(admin=Depends(require_admin)):
 
     conn.close()
     return {"items": rows}
-
 
 @app.post("/admin/approve-membership")
 def admin_approve_membership(payload: ApproveMembershipIn, admin=Depends(require_admin)):
@@ -699,7 +701,6 @@ def admin_approve_membership(payload: ApproveMembershipIn, admin=Depends(require
         "end_date": new_end
     }
 
-
 @app.post("/admin/extend-membership")
 def admin_extend_membership(payload: ExtendMembershipIn, admin=Depends(require_admin)):
     if payload.days not in {7, 15, 30}:
@@ -750,7 +751,6 @@ def admin_extend_membership(payload: ExtendMembershipIn, admin=Depends(require_a
         "end_date": new_end
     }
 
-
 @app.post("/admin/expire-membership")
 def admin_expire_membership(payload: ExpireMembershipIn, admin=Depends(require_admin)):
     conn = db_connect()
@@ -789,7 +789,6 @@ def admin_expire_membership(payload: ExpireMembershipIn, admin=Depends(require_a
         "user_id": payload.user_id
     }
 
-
 @app.post("/admin/delete-request")
 def admin_delete_request(payload: DeleteRequestIn, admin=Depends(require_admin)):
     conn = db_connect()
@@ -813,7 +812,6 @@ def admin_delete_request(payload: DeleteRequestIn, admin=Depends(require_admin))
     )
 
     return {"message": "Solicitud eliminada correctamente."}
-
 
 @app.post("/admin/delete-user")
 def admin_delete_user(payload: DeleteUserIn, admin=Depends(require_admin)):
@@ -849,7 +847,6 @@ def admin_delete_user(payload: DeleteUserIn, admin=Depends(require_admin)):
 
     return {"message": "Usuario eliminado correctamente."}
 
-
 @app.get("/admin/admins")
 def list_admins(admin=Depends(require_superadmin)):
     conn = db_connect()
@@ -864,6 +861,54 @@ def list_admins(admin=Depends(require_superadmin)):
     conn.close()
     return {"items": items}
 
+# =========================
+# ADMIN EXCEL UPLOAD
+# =========================
+
+@app.post("/admin/upload-excel")
+async def admin_upload_excel(
+    file: UploadFile = File(...),
+    admin=Depends(require_admin)
+):
+    filename = file.filename or ""
+    suffix = Path(filename).suffix.lower()
+
+    if suffix not in {".xlsx", ".xlsm", ".xls"}:
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos Excel (.xlsx, .xlsm, .xls).")
+
+    stored_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{Path(filename).name}"
+    temp_file_path = TEMP_UPLOADS_DIR / stored_name
+
+    try:
+        content = await file.read()
+        with open(temp_file_path, "wb") as f:
+            f.write(content)
+
+        result = process_excel_to_json(temp_file_path, DATA_DIR)
+
+        write_admin_log(
+            admin_user_id=admin["user_id"],
+            action="upload_excel",
+            details=f"Archivo: {stored_name} | Fecha: {result.get('date')}"
+        )
+
+        return {
+            "status": "ok",
+            "message": "Excel procesado correctamente.",
+            "source_file": result.get("source_file"),
+            "date": result.get("date"),
+            "generated_at": result.get("generated_at"),
+            "counts": result.get("counts", {}),
+            "latest_path": result.get("latest_path"),
+            "daily_path": result.get("daily_path"),
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error procesando Excel: {e}")
+
+# =========================
+# DATA ENDPOINTS FOR INDEX
+# =========================
 
 def load_latest_json() -> dict[str, Any]:
     latest_path = DATA_DIR / "latest.json"
@@ -876,7 +921,8 @@ def load_latest_json() -> dict[str, Any]:
             "combinadas": [],
             "goles": [],
             "top": [],
-            "alta_confianza": []
+            "alta_confianza": [],
+            "inferno": []
         }
 
     try:
@@ -888,52 +934,50 @@ def load_latest_json() -> dict[str, Any]:
     except Exception:
         return {}
 
-
 def get_section_items(section: str) -> list[dict[str, Any]]:
     data = load_latest_json()
     items = data.get(section, [])
     return items if isinstance(items, list) else []
 
-
 @app.get("/api/data/public")
 def api_data_public():
     return {"items": get_section_items("public")}
-
 
 @app.get("/api/data/general")
 def api_data_general():
     return {"items": get_section_items("general")}
 
-
 @app.get("/api/data/ultra")
 def api_data_ultra():
     return {"items": get_section_items("ultra")}
-
 
 @app.get("/api/data/stakes")
 def api_data_stakes():
     return {"items": get_section_items("stakes")}
 
-
 @app.get("/api/data/combinadas")
 def api_data_combinadas():
     return {"items": get_section_items("combinadas")}
-
 
 @app.get("/api/data/goles")
 def api_data_goles():
     return {"items": get_section_items("goles")}
 
-
 @app.get("/api/data/top")
 def api_data_top():
     return {"items": get_section_items("top")}
-
 
 @app.get("/api/data/alta-confianza")
 def api_data_alta_confianza():
     return {"items": get_section_items("alta_confianza")}
 
+@app.get("/api/data/inferno")
+def api_data_inferno():
+    return {"items": get_section_items("inferno")}
+
+# =========================
+# HEALTH / DEBUG
+# =========================
 
 @app.get("/health")
 def health():
@@ -946,9 +990,13 @@ def health():
         "latest_json": str(latest_path),
         "latest_exists": latest_path.exists(),
         "uploads_dir": str(UPLOADS_DIR),
+        "temp_uploads_dir": str(TEMP_UPLOADS_DIR),
         "static_dir": str(STATIC_DIR)
     }
 
+# =========================
+# RUN LOCAL
+# =========================
 
 if __name__ == "__main__":
     import uvicorn
