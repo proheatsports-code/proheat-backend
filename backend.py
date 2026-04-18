@@ -5,11 +5,13 @@ import json
 import sqlite3
 import secrets
 import hashlib
+import base64
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Any
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header
+import requests
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -35,6 +37,14 @@ DEFAULT_SUPERADMIN_EMAIL = os.getenv("DEFAULT_SUPERADMIN_EMAIL", "admin@proheats
 DEFAULT_SUPERADMIN_PASSWORD = os.getenv("DEFAULT_SUPERADMIN_PASSWORD", "ProHeatAdmin123!")
 
 PASSWORD_ITERATIONS = 120_000
+
+# PayPal
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_WEBHOOK_ID = os.getenv("PAYPAL_WEBHOOK_ID", "")
+PAYPAL_API_BASE = os.getenv("PAYPAL_API_BASE", "https://api-m.paypal.com")
+PREMIUM_PRICE_MXN = os.getenv("PREMIUM_PRICE_MXN", "110.00")
+PREMIUM_DAYS = int(os.getenv("PREMIUM_DAYS", "30"))
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -109,6 +119,9 @@ def ensure_dirs() -> None:
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     TEMP_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
+def row_to_dict(row: Optional[sqlite3.Row]) -> dict[str, Any]:
+    return dict(row) if row else {}
+
 # =========================
 # DB INIT
 # =========================
@@ -169,6 +182,23 @@ def init_db() -> None:
         target_user_id TEXT,
         details TEXT,
         created_at TEXT NOT NULL
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS paypal_payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        payment_id TEXT UNIQUE NOT NULL,
+        user_id TEXT NOT NULL,
+        paypal_order_id TEXT,
+        paypal_capture_id TEXT,
+        amount TEXT NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'MXN',
+        status TEXT NOT NULL,
+        raw_payload TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(user_id) REFERENCES users(user_id)
     )
     """)
 
@@ -312,6 +342,159 @@ def write_admin_log(admin_user_id: str, action: str, target_user_id: Optional[st
     """, (admin_user_id, action, target_user_id, details, iso_now()))
     conn.commit()
     conn.close()
+
+# =========================
+# PAYPAL HELPERS
+# =========================
+
+def paypal_get_access_token() -> str:
+    if not PAYPAL_CLIENT_ID or not PAYPAL_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="Faltan credenciales PayPal en variables de entorno.")
+
+    auth = base64.b64encode(f"{PAYPAL_CLIENT_ID}:{PAYPAL_CLIENT_SECRET}".encode()).decode()
+
+    response = requests.post(
+        f"{PAYPAL_API_BASE}/v1/oauth2/token",
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        data={"grant_type": "client_credentials"},
+        timeout=30,
+    )
+
+    if response.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail=f"No se pudo obtener token PayPal: {response.text}")
+
+    data = response.json()
+    return data["access_token"]
+
+def activate_membership_for_user(user_id: str, days: int, note: str = "") -> dict[str, Any]:
+    conn = db_connect()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    user = cur.fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+    base_dt = now_utc()
+    current_end = parse_dt(user["membership_end"])
+    if current_end and current_end > base_dt:
+        base_dt = current_end
+
+    new_start = user["membership_start"] or iso_now()
+    new_end = (base_dt + timedelta(days=days)).isoformat()
+    updated_at = iso_now()
+
+    cur.execute("""
+    UPDATE users
+    SET membership_start = ?, membership_end = ?, updated_at = ?
+    WHERE user_id = ?
+    """, (new_start, new_end, updated_at, user_id))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "user_id": user_id,
+        "membership_start": new_start,
+        "membership_end": new_end,
+        "note": note,
+    }
+
+def save_paypal_payment(
+    user_id: str,
+    order_id: str = "",
+    capture_id: str = "",
+    amount: str = "110.00",
+    currency: str = "MXN",
+    status: str = "created",
+    raw_payload: dict[str, Any] | None = None,
+) -> str:
+    conn = db_connect()
+    cur = conn.cursor()
+
+    payment_id = f"pp_{secrets.token_hex(8)}"
+    now_str = iso_now()
+
+    cur.execute("""
+    INSERT INTO paypal_payments (
+        payment_id, user_id, paypal_order_id, paypal_capture_id,
+        amount, currency, status, raw_payload, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        payment_id,
+        user_id,
+        order_id,
+        capture_id,
+        amount,
+        currency,
+        status,
+        json.dumps(raw_payload or {}, ensure_ascii=False),
+        now_str,
+        now_str,
+    ))
+
+    conn.commit()
+    conn.close()
+    return payment_id
+
+def update_paypal_payment_status(
+    order_id: str,
+    capture_id: str = "",
+    status: str = "completed",
+    raw_payload: dict[str, Any] | None = None,
+) -> None:
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+    UPDATE paypal_payments
+    SET paypal_capture_id = COALESCE(?, paypal_capture_id),
+        status = ?,
+        raw_payload = ?,
+        updated_at = ?
+    WHERE paypal_order_id = ?
+    """, (
+        capture_id or None,
+        status,
+        json.dumps(raw_payload or {}, ensure_ascii=False),
+        iso_now(),
+        order_id,
+    ))
+    conn.commit()
+    conn.close()
+
+def verify_paypal_webhook(headers: dict[str, str], body: dict[str, Any]) -> bool:
+    access_token = paypal_get_access_token()
+
+    verify_payload = {
+        "auth_algo": headers.get("paypal-auth-algo", ""),
+        "cert_url": headers.get("paypal-cert-url", ""),
+        "transmission_id": headers.get("paypal-transmission-id", ""),
+        "transmission_sig": headers.get("paypal-transmission-sig", ""),
+        "transmission_time": headers.get("paypal-transmission-time", ""),
+        "webhook_id": PAYPAL_WEBHOOK_ID,
+        "webhook_event": body,
+    }
+
+    response = requests.post(
+        f"{PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        },
+        json=verify_payload,
+        timeout=30,
+    )
+
+    if response.status_code not in (200, 201):
+        return False
+
+    data = response.json()
+    return data.get("verification_status") == "SUCCESS"
 
 # =========================
 # STATIC / FILES
@@ -496,6 +679,179 @@ async def upload_proof(user_id: str, file: UploadFile = File(...)):
         "request_id": request_id,
         "proof_url": proof_url
     }
+
+# =========================
+# PAYPAL PUBLIC ENDPOINTS
+# =========================
+
+@app.post("/paypal/create-order")
+def paypal_create_order(user=Depends(require_logged_user)):
+    access_token = paypal_get_access_token()
+
+    payload = {
+        "intent": "CAPTURE",
+        "purchase_units": [
+            {
+                "reference_id": user["user_id"],
+                "custom_id": user["user_id"],
+                "description": "ProHeat Sports Premium 30 días",
+                "amount": {
+                    "currency_code": "MXN",
+                    "value": PREMIUM_PRICE_MXN
+                }
+            }
+        ],
+        "application_context": {
+            "brand_name": "ProHeat Sports",
+            "user_action": "PAY_NOW",
+            "shipping_preference": "NO_SHIPPING"
+        }
+    }
+
+    response = requests.post(
+        f"{PAYPAL_API_BASE}/v2/checkout/orders",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=30,
+    )
+
+    if response.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail=f"Error creando orden PayPal: {response.text}")
+
+    data = response.json()
+    order_id = data.get("id", "")
+
+    save_paypal_payment(
+        user_id=user["user_id"],
+        order_id=order_id,
+        amount=PREMIUM_PRICE_MXN,
+        currency="MXN",
+        status="created",
+        raw_payload=data,
+    )
+
+    return data
+
+@app.post("/paypal/capture-order/{order_id}")
+def paypal_capture_order(order_id: str, user=Depends(require_logged_user)):
+    access_token = paypal_get_access_token()
+
+    response = requests.post(
+        f"{PAYPAL_API_BASE}/v2/checkout/orders/{order_id}/capture",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        },
+        timeout=30,
+    )
+
+    if response.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail=f"Error capturando orden PayPal: {response.text}")
+
+    data = response.json()
+    status = data.get("status", "")
+    capture_id = ""
+
+    purchase_units = data.get("purchase_units", [])
+    if purchase_units:
+        payments = purchase_units[0].get("payments", {})
+        captures = payments.get("captures", [])
+        if captures:
+            capture_id = captures[0].get("id", "")
+
+    update_paypal_payment_status(
+        order_id=order_id,
+        capture_id=capture_id,
+        status=(status.lower() or "completed"),
+        raw_payload=data,
+    )
+
+    if status == "COMPLETED":
+        membership = activate_membership_for_user(
+            user_id=user["user_id"],
+            days=PREMIUM_DAYS,
+            note=f"PayPal order {order_id}"
+        )
+
+        write_admin_log(
+            admin_user_id="paypal_auto",
+            action="paypal_auto_approve",
+            target_user_id=user["user_id"],
+            details=f"order_id={order_id} capture_id={capture_id}"
+        )
+
+        return {
+            "status": "ok",
+            "message": "Pago completado y membresía activada automáticamente.",
+            "paypal_status": status,
+            "order_id": order_id,
+            "capture_id": capture_id,
+            "membership": membership,
+        }
+
+    return {
+        "status": "pending",
+        "message": "La orden fue capturada pero no quedó completada.",
+        "paypal_status": status,
+        "order_id": order_id,
+        "capture_id": capture_id,
+    }
+
+@app.post("/paypal/webhook")
+async def paypal_webhook(request: Request):
+    body = await request.json()
+    headers = {k.lower(): v for k, v in request.headers.items()}
+
+    if not PAYPAL_WEBHOOK_ID:
+        raise HTTPException(status_code=500, detail="Falta PAYPAL_WEBHOOK_ID.")
+
+    is_valid = verify_paypal_webhook(headers, body)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Webhook PayPal no válido.")
+
+    event_type = body.get("event_type", "")
+
+    if event_type == "PAYMENT.CAPTURE.COMPLETED":
+        resource = body.get("resource", {})
+        capture_id = resource.get("id", "")
+        amount = resource.get("amount", {}).get("value", PREMIUM_PRICE_MXN)
+        currency = resource.get("amount", {}).get("currency_code", "MXN")
+        supplementary = resource.get("supplementary_data", {})
+        related_ids = supplementary.get("related_ids", {})
+        order_id = related_ids.get("order_id", "")
+
+        if order_id:
+            conn = db_connect()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM paypal_payments WHERE paypal_order_id = ?", (order_id,))
+            payment_row = cur.fetchone()
+            conn.close()
+
+            if payment_row and payment_row["status"] != "completed":
+                update_paypal_payment_status(
+                    order_id=order_id,
+                    capture_id=capture_id,
+                    status="completed",
+                    raw_payload=body,
+                )
+
+                activate_membership_for_user(
+                    user_id=payment_row["user_id"],
+                    days=PREMIUM_DAYS,
+                    note=f"Webhook PayPal order {order_id}"
+                )
+
+                write_admin_log(
+                    admin_user_id="paypal_webhook",
+                    action="paypal_webhook_auto_approve",
+                    target_user_id=payment_row["user_id"],
+                    details=f"order_id={order_id} capture_id={capture_id} amount={amount} {currency}"
+                )
+
+    return {"status": "ok"}
 
 # =========================
 # ADMIN AUTH / DATA
@@ -834,6 +1190,7 @@ def admin_delete_user(payload: DeleteUserIn, admin=Depends(require_admin)):
 
     cur.execute("DELETE FROM sessions WHERE user_id = ?", (payload.user_id,))
     cur.execute("DELETE FROM payment_requests WHERE user_id = ?", (payload.user_id,))
+    cur.execute("DELETE FROM paypal_payments WHERE user_id = ?", (payload.user_id,))
     cur.execute("DELETE FROM users WHERE user_id = ?", (payload.user_id,))
     conn.commit()
     conn.close()
@@ -991,7 +1348,8 @@ def health():
         "latest_exists": latest_path.exists(),
         "uploads_dir": str(UPLOADS_DIR),
         "temp_uploads_dir": str(TEMP_UPLOADS_DIR),
-        "static_dir": str(STATIC_DIR)
+        "static_dir": str(STATIC_DIR),
+        "paypal_configured": bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET)
     }
 
 # =========================
