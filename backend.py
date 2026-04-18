@@ -1349,7 +1349,12 @@ def health():
         "uploads_dir": str(UPLOADS_DIR),
         "temp_uploads_dir": str(TEMP_UPLOADS_DIR),
         "static_dir": str(STATIC_DIR),
-        "paypal_configured": bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET)
+        "paypal_configured": bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET),
+        "paypal_client_id_present": bool(PAYPAL_CLIENT_ID),
+        "paypal_client_secret_present": bool(PAYPAL_CLIENT_SECRET),
+        "paypal_api_base_present": bool(PAYPAL_API_BASE),
+        "paypal_client_id_len": len(PAYPAL_CLIENT_ID or ""),
+        "paypal_client_secret_len": len(PAYPAL_CLIENT_SECRET or ""),
     }
 
 # =========================
