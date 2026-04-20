@@ -575,6 +575,38 @@
       text-decoration: none;
     }
 
+    .paypal-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .paypal-box h4 {
+      margin: 0 0 10px;
+      color: #ffbf66;
+      font-size: 18px;
+    }
+
+    .paypal-price {
+      font-weight: bold;
+      color: orange;
+      margin-bottom: 10px;
+    }
+
+    .paypal-message {
+      color: #d8d8d8;
+      line-height: 1.45;
+      font-size: 14px;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+
+    #paypal-button-container {
+      margin-top: 14px;
+    }
+
     @media (max-width: 1200px) {
       .brand-text { font-size: 26px; }
       .hero-title { font-size: 60px; }
@@ -721,6 +753,16 @@
         Sesión actual: sin iniciar.
       </div>
 
+      <div class="paypal-box" id="paypalBox">
+        <h4>Pago inmediato con PayPal</h4>
+        <div class="paypal-price">Premium 30 días · $110 MXN</div>
+        <div class="proof-note">
+          Paga con PayPal o tarjeta. Si el pago se completa correctamente, tu membresía se activará automáticamente.
+        </div>
+        <div id="paypal-button-container"></div>
+        <div class="paypal-message" id="paypalMessage"></div>
+      </div>
+
       <div class="proof-box" id="proofBox">
         <strong style="color:#ffbf66;">Subir comprobante de pago</strong>
         <div class="proof-note">
@@ -826,8 +868,12 @@
   <script>
     const API_BASE = "https://proheat-backend-production.up.railway.app";
     const DATA_API_BASE = "https://proheat-backend-production.up.railway.app";
+    const PAYPAL_CLIENT_ID = "AXLPKxFE2iHKD4lExlFg0WPz8g1tXS9rd8ZPkkD1lils-wNbhfFKCSIQP46p1_-OLhRQ_ceDDu1VPRhP";
+    const PAYPAL_CURRENCY = "MXN";
 
     let premiumApiData = {};
+    let paypalButtonsRendered = false;
+    let paypalSdkPromise = null;
 
     const premiumNotes = {
       general: "Tabla general cargada desde /api/data/general.",
@@ -851,6 +897,12 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+    function setPaypalMessage(text = "", isError = false) {
+      const el = document.getElementById("paypalMessage");
+      el.textContent = text;
+      el.style.color = isError ? "#ff8b8b" : "#d8d8d8";
     }
 
     function renderPublicCards(rows) {
@@ -1055,6 +1107,24 @@
       if (bodyBtn) bodyBtn.textContent = label;
     }
 
+    function updatePaywallVisibility(membershipState = "guest") {
+      const paypalBox = document.getElementById("paypalBox");
+      const proofBox = document.getElementById("proofBox");
+
+      if (membershipState === "active") {
+        paypalBox.style.display = "none";
+        proofBox.style.display = "none";
+      } else if (membershipState === "logged_no_membership" || membershipState === "expired") {
+        paypalBox.style.display = "block";
+        proofBox.style.display = "block";
+        renderPayPalButtons();
+      } else {
+        paypalBox.style.display = "block";
+        proofBox.style.display = "block";
+        setPaypalMessage("Inicia sesión para pagar y activar premium automáticamente.");
+      }
+    }
+
     function logoutUser() {
       localStorage.removeItem("proheat_user_id");
       localStorage.removeItem("proheat_user_name");
@@ -1068,7 +1138,7 @@
       document.getElementById("membershipMessage").textContent = "Crea tu cuenta o inicia sesión.";
       document.getElementById("premiumLockedBox").style.display = "block";
       document.getElementById("premiumUnlockedBox").style.display = "none";
-      document.getElementById("proofBox").style.display = "block";
+      updatePaywallVisibility("guest");
       updateAuthButtons();
     }
 
@@ -1163,7 +1233,6 @@
       const msg = document.getElementById("membershipMessage");
       const locked = document.getElementById("premiumLockedBox");
       const unlocked = document.getElementById("premiumUnlockedBox");
-      const proofBox = document.getElementById("proofBox");
 
       if (!user_id) {
         pill.className = "status-pill status-guest";
@@ -1171,7 +1240,7 @@
         msg.textContent = "Crea tu cuenta o inicia sesión.";
         locked.style.display = "block";
         unlocked.style.display = "none";
-        proofBox.style.display = "block";
+        updatePaywallVisibility("guest");
         updateAuthButtons();
         return;
       }
@@ -1186,6 +1255,7 @@
           msg.textContent = data.detail || "No se pudo consultar la membresía.";
           locked.style.display = "block";
           unlocked.style.display = "none";
+          updatePaywallVisibility("guest");
           return;
         }
 
@@ -1195,7 +1265,7 @@
           msg.textContent = `Tu membresía está activa. Fin: ${data.end_date || "N/A"}`;
           locked.style.display = "none";
           unlocked.style.display = "block";
-          proofBox.style.display = "none";
+          updatePaywallVisibility("active");
 
           const activeButton = document.querySelector(".premium-tab-btn.active");
           showPremiumTab("general", activeButton);
@@ -1206,14 +1276,14 @@
           msg.textContent = "Tu membresía ha vencido.";
           locked.style.display = "block";
           unlocked.style.display = "none";
-          proofBox.style.display = "block";
+          updatePaywallVisibility("expired");
         } else {
           pill.className = "status-pill status-pending";
           pill.textContent = "Sin membresía activa";
           msg.textContent = "Tu cuenta existe, pero todavía no tienes una membresía activa.";
           locked.style.display = "block";
           unlocked.style.display = "none";
-          proofBox.style.display = "block";
+          updatePaywallVisibility("logged_no_membership");
         }
       } catch (error) {
         console.error(error);
@@ -1222,6 +1292,7 @@
         msg.textContent = "No se pudo conectar con el backend para validar la membresía.";
         locked.style.display = "block";
         unlocked.style.display = "none";
+        updatePaywallVisibility("guest");
       }
     }
 
@@ -1279,6 +1350,142 @@
         checkMembership();
       }
       updateAuthButtons();
+    }
+
+    function ensurePayPalSdkLoaded() {
+      if (window.paypal) return Promise.resolve(window.paypal);
+      if (paypalSdkPromise) return paypalSdkPromise;
+
+      paypalSdkPromise = new Promise((resolve, reject) => {
+        if (!PAYPAL_CLIENT_ID || PAYPAL_CLIENT_ID === "PEGAR_AQUI_CLIENT_ID_PAYPAL") {
+          setPaypalMessage("Falta configurar el Client ID de PayPal en index.html.", true);
+          reject(new Error("PayPal Client ID no configurado."));
+          return;
+        }
+
+        const existingScript = document.querySelector('script[data-paypal-sdk="true"]');
+        if (existingScript) {
+          existingScript.remove();
+        }
+
+        const script = document.createElement("script");
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(PAYPAL_CLIENT_ID)}&currency=${encodeURIComponent(PAYPAL_CURRENCY)}`;
+        script.async = true;
+        script.dataset.paypalSdk = "true";
+        script.onload = () => resolve(window.paypal);
+        script.onerror = () => reject(new Error("No se pudo cargar el SDK de PayPal."));
+        document.head.appendChild(script);
+      });
+
+      return paypalSdkPromise;
+    }
+
+    async function createPayPalOrder() {
+      const token = localStorage.getItem("proheat_user_token");
+      if (!token) {
+        throw new Error("Primero inicia sesión para continuar con el pago.");
+      }
+
+      const response = await fetch(`${API_BASE}/paypal/create-order`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "No se pudo crear la orden PayPal.");
+      }
+
+      return data.id;
+    }
+
+    async function capturePayPalOrder(orderID) {
+      const token = localStorage.getItem("proheat_user_token");
+      if (!token) {
+        throw new Error("No hay sesión activa.");
+      }
+
+      const response = await fetch(`${API_BASE}/paypal/capture-order/${orderID}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "No se pudo capturar la orden PayPal.");
+      }
+
+      return data;
+    }
+
+    async function renderPayPalButtons() {
+      const container = document.getElementById("paypal-button-container");
+      if (!container) return;
+
+      const token = localStorage.getItem("proheat_user_token");
+      if (!token) {
+        container.innerHTML = "";
+        setPaypalMessage("Inicia sesión para pagar y activar premium automáticamente.");
+        paypalButtonsRendered = false;
+        return;
+      }
+
+      if (paypalButtonsRendered) return;
+
+      try {
+        setPaypalMessage("Cargando botón de PayPal...");
+        const paypal = await ensurePayPalSdkLoaded();
+
+        container.innerHTML = "";
+
+        paypal.Buttons({
+          style: {
+            shape: "pill",
+            layout: "vertical",
+            color: "gold",
+            label: "paypal"
+          },
+
+          createOrder: async () => {
+            setPaypalMessage("Creando orden PayPal...");
+            return await createPayPalOrder();
+          },
+
+          onApprove: async (data) => {
+            try {
+              setPaypalMessage("Capturando pago y activando membresía...");
+              const result = await capturePayPalOrder(data.orderID);
+              setPaypalMessage(result.message || "Pago completado correctamente.");
+              paypalButtonsRendered = false;
+              await checkMembership(localStorage.getItem("proheat_user_id"));
+            } catch (error) {
+              console.error(error);
+              setPaypalMessage(error.message || "No se pudo completar el pago.", true);
+            }
+          },
+
+          onCancel: () => {
+            setPaypalMessage("Pago cancelado por el usuario.");
+          },
+
+          onError: (err) => {
+            console.error(err);
+            setPaypalMessage("Error al procesar PayPal.", true);
+          }
+        }).render("#paypal-button-container");
+
+        paypalButtonsRendered = true;
+        setPaypalMessage("Listo para pagar.");
+      } catch (error) {
+        console.error(error);
+        setPaypalMessage(error.message || "No se pudo cargar PayPal.", true);
+      }
     }
 
     async function bootApp() {
