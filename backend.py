@@ -121,7 +121,6 @@ def ensure_dirs() -> None:
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     TEMP_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     VIDEO_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-VIDEO_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 def row_to_dict(row: Optional[sqlite3.Row]) -> dict[str, Any]:
     return dict(row) if row else {}
@@ -534,6 +533,13 @@ def root():
     if index_path.exists():
         return FileResponse(index_path)
     return JSONResponse({"message": "Backend ProHeat activo."})
+
+@app.get("/premium", response_model=None)
+def premium_page():
+    premium_path = STATIC_DIR / "premium.html"
+    if premium_path.exists():
+        return FileResponse(premium_path)
+    return JSONResponse({"message": "Sube premium.html a la carpeta static."})
 
 @app.get("/admin", response_model=None)
 def admin_page():
@@ -1240,7 +1246,6 @@ def list_admins(admin=Depends(require_superadmin)):
     conn.close()
     return {"items": items}
 
-
 # =========================
 # ADMIN VIDEO PICKS
 # =========================
@@ -1499,7 +1504,6 @@ def api_data_alta_confianza():
 @app.get("/api/data/inferno")
 def api_data_inferno():
     return {"items": get_section_items("inferno")}
-
 
 @app.get("/api/data/videopicks")
 def api_data_videopicks():

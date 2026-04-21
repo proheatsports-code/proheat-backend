@@ -18,6 +18,11 @@
       color: white;
     }
 
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
     .wrap {
       max-width: 1300px;
       margin: 0 auto;
@@ -56,6 +61,9 @@
       cursor: pointer;
       font-weight: bold;
       transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn-primary {
@@ -311,7 +319,8 @@
       </div>
 
       <div class="action-group">
-        <a href="/" class="btn btn-secondary" style="text-decoration:none;">Volver al sitio</a>
+        <a href="/" class="btn btn-secondary">Volver al sitio</a>
+        <a href="/premium" class="btn btn-secondary">Ir a Premium</a>
         <button class="btn btn-secondary" onclick="logoutAdmin()">Cerrar sesión</button>
       </div>
     </div>
@@ -411,7 +420,7 @@
             <button class="btn btn-secondary" onclick="approveDays(15)">Aprobar 15 días</button>
             <button class="btn btn-secondary" onclick="approveDays(30)">Aprobar 30 días</button>
             <button class="btn btn-secondary" onclick="extendDays(15)">Extender 15 días</button>
-            <button class="btn btn-secondary" onclick="expireMembership()">Vencer membresía</button>
+            <button class="btn btn-secondary" onclick="expireMembershipManual()">Vencer membresía</button>
             <button class="btn btn-danger" onclick="deleteUserManual()">Eliminar usuario</button>
           </div>
 
@@ -1178,7 +1187,7 @@
       extendMembership(userId, days);
     }
 
-    function expireMembership() {
+    function expireMembershipManual() {
       const userId = document.getElementById("targetUserId").value.trim();
       if (!userId) {
         showMessage("actionMessage", "Escribe o carga un user_id.", "error");

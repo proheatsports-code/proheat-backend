@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ProHeat Premium</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- PAYPAL SDK (LIVE) -->
+<script src="https://www.paypal.com/sdk/js?client-id=ATF9sXE6MPpXpPI5qBN5kDy-Xm7n9JPgFylvPm0apb5qyN9fCUwtEvexelhAHmB1tRlW1JOsUKOoV_kV&currency=MXN"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#000;
+  color:white;
+}
+
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:20px;
+}
+
+.card{
+  background:#111;
+  padding:20px;
+  border-radius:15px;
+  margin-bottom:20px;
+  border:1px solid rgba(255,120,0,0.3);
+}
+
+.btn{
+  background:orange;
+  color:black;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  width:100%;
+  font-weight:bold;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:none;
+}
+
+.message{
+  margin-top:10px;
+  padding:10px;
+  border-radius:8px;
+}
+
+.success{ background:#1f7a3a; }
+.error{ background:#8b2c2c; }
+.warning{ background:#8a6a1d; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🔥 ProHeat Premium</h1>
+
+<!-- LOGIN -->
+<div class="card" id="loginBox">
+<h2>Iniciar sesión</h2>
+
+<input type="email" id="email" placeholder="Correo">
+<input type="password" id="password" placeholder="Contraseña">
+
+<button class="btn" onclick="login()">Entrar</button>
+
+<div id="loginMessage"></div>
+
+<h3>Crear cuenta</h3>
+
+<input type="text" id="nameReg" placeholder="Nombre">
+<input type="email" id="emailReg" placeholder="Correo">
+<input type="password" id="passReg" placeholder="Contraseña">
+
+<button class="btn" onclick="register()">Registrarse</button>
+
+</div>
+
+<!-- USUARIO -->
+<div class="card hidden" id="userBox">
+<h2 id="userInfo"></h2>
+
+<p id="membershipStatus"></p>
+
+<h3>Premium 30 días - $110 MXN</h3>
+
+<div id="paypal-button-container"></div>
+<div id="paypalMessage"></div>
+
+<button class="btn" onclick="logout()">Cerrar sesión</button>
+</div>
+
+</div>
+
+<script>
+const API = window.location.origin;
+
+function setMsg(id, msg, type){
+  const el = document.getElementById(id);
+  el.innerHTML = msg;
+  el.className = "message " + type;
+}
+
+function saveToken(t){ localStorage.setItem("token", t); }
+function getToken(){ return localStorage.getItem("token"); }
+
+function logout(){
+  localStorage.removeItem("token");
+  location.reload();
+}
+
+async function register(){
+  const name = document.getElementById("nameReg").value;
+  const email = document.getElementById("emailReg").value;
+  const password = document.getElementById("passReg").value;
+
+  const res = await fetch(API+"/register",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({name,email,password})
+  });
+
+  const data = await res.json();
+
+  if(res.ok){
+    setMsg("loginMessage","Cuenta creada ✔ ahora inicia sesión","success");
+  }else{
+    setMsg("loginMessage",data.detail,"error");
+  }
+}
+
+async function login(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch(API+"/login",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({email,password})
+  });
+
+  const data = await res.json();
+
+  if(!res.ok){
+    setMsg("loginMessage",data.detail,"error");
+    return;
+  }
+
+  saveToken(data.token);
+
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("userBox").classList.remove("hidden");
+
+  document.getElementById("userInfo").innerText =
+    data.name;
+
+  loadMembership(data.user_id);
+  initPayPal();
+}
+
+async function loadMembership(user_id){
+  const res = await fetch(API+"/membership/"+user_id);
+  const data = await res.json();
+
+  document.getElementById("membershipStatus").innerText =
+    "Estado: " + data.membership;
+}
+
+function initPayPal(){
+  paypal.Buttons({
+
+    createOrder: async function(){
+      const res = await fetch(API+"/paypal/create-order",{
+        method:"POST",
+        headers:{ "Authorization":"Bearer "+getToken() }
+      });
+
+      const data = await res.json();
+
+      if(!res.ok){
+        setMsg("paypalMessage",data.detail,"error");
+        throw new Error();
+      }
+
+      return data.id;
+    },
+
+    onApprove: async function(data){
+      const res = await fetch(API+"/paypal/capture-order/"+data.orderID,{
+        method:"POST",
+        headers:{ "Authorization":"Bearer "+getToken() }
+      });
+
+      const result = await res.json();
+
+      if(res.ok){
+        setMsg("paypalMessage","Pago exitoso ✔","success");
+        setTimeout(()=>location.reload(),1500);
+      }else{
+        setMsg("paypalMessage",result.detail,"error");
+      }
+    },
+
+    onError: function(err){
+      console.error(err);
+      setMsg("paypalMessage","Error PayPal","error");
+    }
+
+  }).render("#paypal-button-container");
+}
+
+(function(){
+  const token = getToken();
+  if(token){
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("userBox").classList.remove("hidden");
+    initPayPal();
+  }
+})();
+</script>
+
+</body>
+</html>
