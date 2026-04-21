@@ -37,7 +37,7 @@
     .topbar {
       position: sticky;
       top: 0;
-      z-index: 50;
+      z-index: 60;
       background: rgba(0, 0, 0, 0.9);
       backdrop-filter: blur(8px);
       border-bottom: 1px solid rgba(255,120,0,0.14);
@@ -83,10 +83,12 @@
       gap: 10px;
       flex-wrap: wrap;
       justify-content: flex-end;
+      position: relative;
     }
 
     .nav a,
-    .lang-btn {
+    .lang-btn,
+    .menu-btn {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,120,0,0.18);
       color: white;
@@ -99,7 +101,8 @@
     }
 
     .nav a:hover,
-    .lang-btn:hover {
+    .lang-btn:hover,
+    .menu-btn:hover {
       border-color: orange;
       color: orange;
     }
@@ -108,6 +111,51 @@
       background: orange;
       color: black;
       border-color: orange;
+    }
+
+    .premium-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.18);
+      color: white;
+    }
+
+    .menu-dropdown {
+      position: relative;
+    }
+
+    .menu-list {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      min-width: 220px;
+      background: rgba(10,10,10,0.98);
+      border: 1px solid rgba(255,120,0,0.22);
+      border-radius: 18px;
+      padding: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      display: none;
+      z-index: 100;
+    }
+
+    .menu-list.show {
+      display: block;
+    }
+
+    .menu-item {
+      display: block;
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      color: white;
+      font-weight: bold;
+      border: 1px solid transparent;
+      transition: 0.2s ease;
+    }
+
+    .menu-item:hover {
+      color: orange;
+      border-color: rgba(255,120,0,0.18);
+      background: rgba(255,255,255,0.03);
     }
 
     .hero {
@@ -296,6 +344,61 @@
       white-space: pre-wrap;
     }
 
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .info-box {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .info-box h3 {
+      margin-top: 0;
+      color: orange;
+      font-size: 24px;
+    }
+
+    .info-box p, .info-box li {
+      color: #d7d7d7;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    .info-box ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .contact-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .contact-item {
+      display: block;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: rgba(255,255,255,0.02);
+      color: #f1f1f1;
+      word-break: break-word;
+    }
+
+    .contact-label {
+      display: block;
+      font-size: 13px;
+      color: orange;
+      margin-bottom: 4px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
     .muted {
       color: #bfbfbf;
     }
@@ -318,6 +421,10 @@
 
       .hero-copy h1 {
         font-size: 58px;
+      }
+
+      .two-col {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -355,6 +462,11 @@
       .nav {
         justify-content: center;
       }
+
+      .menu-list {
+        right: auto;
+        left: 0;
+      }
     }
   </style>
 </head>
@@ -367,13 +479,21 @@
       </div>
 
       <nav class="nav">
-        <a href="#home" id="navHome">Home</a>
-        <a href="#free-picks" id="navPredictions">Predicciones</a>
-        <a href="#videopick" id="navVideoPick">VideoPick</a>
-        <a href="/premium" id="navPremium">Premium</a>
-        <a href="/admin" id="navAdmin">Admin</a>
+        <a href="/premium" class="premium-btn" id="navPremium">Premium</a>
+
         <button id="btnEs" class="lang-btn active" type="button" onclick="setLanguage('es')">ES</button>
         <button id="btnEn" class="lang-btn" type="button" onclick="setLanguage('en')">EN</button>
+
+        <div class="menu-dropdown">
+          <button class="menu-btn" id="menuButton" type="button" onclick="toggleMenu()">☰ Menú</button>
+          <div class="menu-list" id="menuList">
+            <a class="menu-item" href="#home" id="menuHome" onclick="closeMenu()">Home</a>
+            <a class="menu-item" href="#free-picks" id="menuPredictions" onclick="closeMenu()">Predicciones gratis</a>
+            <a class="menu-item" href="#videopick" id="menuVideoPick" onclick="closeMenu()">VideoPick</a>
+            <a class="menu-item" href="#bot" id="menuBot" onclick="closeMenu()">Bot</a>
+            <a class="menu-item" href="#contacto" id="menuContact" onclick="closeMenu()">Contacto</a>
+          </div>
+        </div>
       </nav>
     </div>
   </header>
@@ -440,6 +560,74 @@
         <div class="muted" id="loadingVideoText">Cargando VideoPick...</div>
       </div>
     </section>
+
+    <section class="section" id="bot">
+      <div class="section-title">
+        <h2 id="botSectionTitle">🤖 Bot ProHeat Sports</h2>
+      </div>
+      <div class="section-note" id="botSectionNote">
+        Accede al bot oficial para recibir contenido, análisis y herramientas de ProHeat Sports.
+      </div>
+
+      <div class="card two-col">
+        <div class="info-box">
+          <h3 id="botBoxTitle">Bot oficial</h3>
+          <p id="botBoxText">
+            Usa el bot de ProHeat Sports para consultar contenido exclusivo, navegar por secciones y acceder a herramientas deportivas desde Telegram.
+          </p>
+          <a class="btn-main" href="https://t.me/ProHeatSports_Bot" target="_blank" rel="noopener noreferrer" id="botButton">
+            Abrir bot
+          </a>
+        </div>
+
+        <div class="info-box">
+          <h3 id="botFeaturesTitle">Qué puedes encontrar</h3>
+          <ul>
+            <li id="botFeature1">Acceso rápido a contenido y secciones ProHeat.</li>
+            <li id="botFeature2">Herramientas y navegación centralizada.</li>
+            <li id="botFeature3">Integración con contenido premium y deportivo.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="contacto">
+      <div class="section-title">
+        <h2 id="contactSectionTitle">📬 Contacto</h2>
+      </div>
+      <div class="section-note" id="contactSectionNote">
+        Ponte en contacto con ProHeat Sports por nuestros canales oficiales.
+      </div>
+
+      <div class="card two-col">
+        <div class="info-box">
+          <h3 id="contactInfoTitle">Canales oficiales</h3>
+          <div class="contact-list">
+            <a class="contact-item" href="https://www.instagram.com/proheatsports" target="_blank" rel="noopener noreferrer">
+              <span class="contact-label" id="contactInstagramLabel">Instagram</span>
+              @proheatsports
+            </a>
+
+            <a class="contact-item" href="https://t.me/proheatsports" target="_blank" rel="noopener noreferrer">
+              <span class="contact-label" id="contactTelegramLabel">Telegram</span>
+              t.me/proheatsports
+            </a>
+
+            <a class="contact-item" href="mailto:proheatsports@gmail.com">
+              <span class="contact-label" id="contactEmailLabel">Correo</span>
+              proheatsports@gmail.com
+            </a>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <h3 id="contactHelpTitle">Atención</h3>
+          <p id="contactHelpText">
+            Para soporte, información sobre membresías, contenido premium o colaboraciones, usa cualquiera de los canales oficiales de ProHeat Sports.
+          </p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="footer" id="footerText">
@@ -455,11 +643,13 @@
 
     const i18n = {
       es: {
-        navHome: "Home",
-        navPredictions: "Predicciones",
-        navVideoPick: "VideoPick",
         navPremium: "Premium",
-        navAdmin: "Admin",
+        menuButton: "☰ Menú",
+        menuHome: "Home",
+        menuPredictions: "Predicciones gratis",
+        menuVideoPick: "VideoPick",
+        menuBot: "Bot",
+        menuContact: "Contacto",
 
         heroLine1: "Predicciones",
         heroLine2: "deportivas con",
@@ -488,15 +678,36 @@
         videoError: "Error cargando VideoPick.",
         fallbackVideoTitle: "VideoPick del Día",
 
+        botSectionTitle: "🤖 Bot ProHeat Sports",
+        botSectionNote: "Accede al bot oficial para recibir contenido, análisis y herramientas de ProHeat Sports.",
+        botBoxTitle: "Bot oficial",
+        botBoxText: "Usa el bot de ProHeat Sports para consultar contenido exclusivo, navegar por secciones y acceder a herramientas deportivas desde Telegram.",
+        botButton: "Abrir bot",
+        botFeaturesTitle: "Qué puedes encontrar",
+        botFeature1: "Acceso rápido a contenido y secciones ProHeat.",
+        botFeature2: "Herramientas y navegación centralizada.",
+        botFeature3: "Integración con contenido premium y deportivo.",
+
+        contactSectionTitle: "📬 Contacto",
+        contactSectionNote: "Ponte en contacto con ProHeat Sports por nuestros canales oficiales.",
+        contactInfoTitle: "Canales oficiales",
+        contactInstagramLabel: "Instagram",
+        contactTelegramLabel: "Telegram",
+        contactEmailLabel: "Correo",
+        contactHelpTitle: "Atención",
+        contactHelpText: "Para soporte, información sobre membresías, contenido premium o colaboraciones, usa cualquiera de los canales oficiales de ProHeat Sports.",
+
         footerText: "ProHeat Sports · Inteligencia deportiva basada en datos"
       },
 
       en: {
-        navHome: "Home",
-        navPredictions: "Predictions",
-        navVideoPick: "VideoPick",
         navPremium: "Premium",
-        navAdmin: "Admin",
+        menuButton: "☰ Menu",
+        menuHome: "Home",
+        menuPredictions: "Free predictions",
+        menuVideoPick: "VideoPick",
+        menuBot: "Bot",
+        menuContact: "Contact",
 
         heroLine1: "Sports",
         heroLine2: "predictions with",
@@ -525,6 +736,25 @@
         videoError: "Error loading VideoPick.",
         fallbackVideoTitle: "VideoPick of the Day",
 
+        botSectionTitle: "🤖 ProHeat Sports Bot",
+        botSectionNote: "Access the official bot to receive ProHeat Sports content, analysis, and tools.",
+        botBoxTitle: "Official bot",
+        botBoxText: "Use the ProHeat Sports bot to explore exclusive content, browse sections, and access sports tools from Telegram.",
+        botButton: "Open bot",
+        botFeaturesTitle: "What you can find",
+        botFeature1: "Fast access to ProHeat content and sections.",
+        botFeature2: "Tools and centralized navigation.",
+        botFeature3: "Integration with premium and sports content.",
+
+        contactSectionTitle: "📬 Contact",
+        contactSectionNote: "Get in touch with ProHeat Sports through our official channels.",
+        contactInfoTitle: "Official channels",
+        contactInstagramLabel: "Instagram",
+        contactTelegramLabel: "Telegram",
+        contactEmailLabel: "Email",
+        contactHelpTitle: "Support",
+        contactHelpText: "For support, membership information, premium content, or collaborations, use any of ProHeat Sports’ official channels.",
+
         footerText: "ProHeat Sports · Data-powered sports intelligence"
       }
     };
@@ -532,6 +762,24 @@
     function t(key) {
       return i18n[currentLanguage][key] || key;
     }
+
+    function toggleMenu() {
+      const menu = document.getElementById("menuList");
+      menu.classList.toggle("show");
+    }
+
+    function closeMenu() {
+      const menu = document.getElementById("menuList");
+      menu.classList.remove("show");
+    }
+
+    window.addEventListener("click", (event) => {
+      const menu = document.getElementById("menuList");
+      const button = document.getElementById("menuButton");
+      if (!menu.contains(event.target) && !button.contains(event.target)) {
+        closeMenu();
+      }
+    });
 
     function setLanguage(lang) {
       currentLanguage = lang;
@@ -545,11 +793,13 @@
     function applyLanguage() {
       document.documentElement.lang = currentLanguage;
 
-      document.getElementById("navHome").textContent = t("navHome");
-      document.getElementById("navPredictions").textContent = t("navPredictions");
-      document.getElementById("navVideoPick").textContent = t("navVideoPick");
       document.getElementById("navPremium").textContent = t("navPremium");
-      document.getElementById("navAdmin").textContent = t("navAdmin");
+      document.getElementById("menuButton").textContent = t("menuButton");
+      document.getElementById("menuHome").textContent = t("menuHome");
+      document.getElementById("menuPredictions").textContent = t("menuPredictions");
+      document.getElementById("menuVideoPick").textContent = t("menuVideoPick");
+      document.getElementById("menuBot").textContent = t("menuBot");
+      document.getElementById("menuContact").textContent = t("menuContact");
 
       document.getElementById("heroLine1").textContent = t("heroLine1");
       document.getElementById("heroLine2").textContent = t("heroLine2");
@@ -568,6 +818,25 @@
 
       document.getElementById("videoSectionTitle").textContent = t("videoSectionTitle");
       document.getElementById("videoSectionNote").textContent = t("videoSectionNote");
+
+      document.getElementById("botSectionTitle").textContent = t("botSectionTitle");
+      document.getElementById("botSectionNote").textContent = t("botSectionNote");
+      document.getElementById("botBoxTitle").textContent = t("botBoxTitle");
+      document.getElementById("botBoxText").textContent = t("botBoxText");
+      document.getElementById("botButton").textContent = t("botButton");
+      document.getElementById("botFeaturesTitle").textContent = t("botFeaturesTitle");
+      document.getElementById("botFeature1").textContent = t("botFeature1");
+      document.getElementById("botFeature2").textContent = t("botFeature2");
+      document.getElementById("botFeature3").textContent = t("botFeature3");
+
+      document.getElementById("contactSectionTitle").textContent = t("contactSectionTitle");
+      document.getElementById("contactSectionNote").textContent = t("contactSectionNote");
+      document.getElementById("contactInfoTitle").textContent = t("contactInfoTitle");
+      document.getElementById("contactInstagramLabel").textContent = t("contactInstagramLabel");
+      document.getElementById("contactTelegramLabel").textContent = t("contactTelegramLabel");
+      document.getElementById("contactEmailLabel").textContent = t("contactEmailLabel");
+      document.getElementById("contactHelpTitle").textContent = t("contactHelpTitle");
+      document.getElementById("contactHelpText").textContent = t("contactHelpText");
 
       document.getElementById("footerText").textContent = t("footerText");
 
