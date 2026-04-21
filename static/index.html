@@ -38,7 +38,7 @@
       position: sticky;
       top: 0;
       z-index: 60;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.92);
       backdrop-filter: blur(8px);
       border-bottom: 1px solid rgba(255,120,0,0.14);
     }
@@ -51,6 +51,14 @@
       align-items: center;
       justify-content: space-between;
       gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .left-zone,
+    .right-zone {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       flex-wrap: wrap;
     }
 
@@ -77,16 +85,6 @@
       white-space: nowrap;
     }
 
-    .nav {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      position: relative;
-    }
-
-    .nav a,
     .lang-btn,
     .menu-btn {
       background: rgba(255,255,255,0.03);
@@ -100,7 +98,6 @@
       font-size: 14px;
     }
 
-    .nav a:hover,
     .lang-btn:hover,
     .menu-btn:hover {
       border-color: orange;
@@ -113,12 +110,6 @@
       border-color: orange;
     }
 
-    .premium-btn {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,120,0,0.18);
-      color: white;
-    }
-
     .menu-dropdown {
       position: relative;
     }
@@ -126,8 +117,8 @@
     .menu-list {
       position: absolute;
       top: calc(100% + 10px);
-      right: 0;
-      min-width: 220px;
+      left: 0;
+      min-width: 240px;
       background: rgba(10,10,10,0.98);
       border: 1px solid rgba(255,120,0,0.22);
       border-radius: 18px;
@@ -350,6 +341,29 @@
       gap: 18px;
     }
 
+    .bot-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 22px;
+      align-items: center;
+    }
+
+    .bot-image-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .bot-image {
+      width: 100%;
+      max-width: 280px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,120,0,0.16);
+      box-shadow: 0 0 22px rgba(255,140,0,0.12);
+      display: block;
+      background: #000;
+    }
+
     .info-box {
       background: rgba(0,0,0,0.18);
       border: 1px solid rgba(255,255,255,0.05);
@@ -410,21 +424,15 @@
       font-size: 14px;
     }
 
-    .hidden {
-      display: none !important;
-    }
-
     @media (max-width: 1080px) {
-      .hero-grid {
+      .hero-grid,
+      .two-col,
+      .bot-grid {
         grid-template-columns: 1fr;
       }
 
       .hero-copy h1 {
         font-size: 58px;
-      }
-
-      .two-col {
-        grid-template-columns: 1fr;
       }
     }
 
@@ -459,13 +467,14 @@
         justify-content: center;
       }
 
-      .nav {
+      .left-zone,
+      .right-zone {
         justify-content: center;
       }
 
       .menu-list {
-        right: auto;
-        left: 0;
+        left: 50%;
+        transform: translateX(-50%);
       }
     }
   </style>
@@ -473,17 +482,7 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand">
-        <img src="/static/logo.png" alt="ProHeat Sports">
-        <div class="brand-title">PROHEAT SPORTS</div>
-      </div>
-
-      <nav class="nav">
-        <a href="/premium" class="premium-btn" id="navPremium">Premium</a>
-
-        <button id="btnEs" class="lang-btn active" type="button" onclick="setLanguage('es')">ES</button>
-        <button id="btnEn" class="lang-btn" type="button" onclick="setLanguage('en')">EN</button>
-
+      <div class="left-zone">
         <div class="menu-dropdown">
           <button class="menu-btn" id="menuButton" type="button" onclick="toggleMenu()">☰ Menú</button>
           <div class="menu-list" id="menuList">
@@ -492,9 +491,20 @@
             <a class="menu-item" href="#videopick" id="menuVideoPick" onclick="closeMenu()">VideoPick</a>
             <a class="menu-item" href="#bot" id="menuBot" onclick="closeMenu()">Bot</a>
             <a class="menu-item" href="#contacto" id="menuContact" onclick="closeMenu()">Contacto</a>
+            <a class="menu-item" href="/premium" id="menuPremium" onclick="closeMenu()">Premium</a>
           </div>
         </div>
-      </nav>
+
+        <div class="brand">
+          <img src="/static/logo.png" alt="ProHeat Sports">
+          <div class="brand-title">PROHEAT SPORTS</div>
+        </div>
+      </div>
+
+      <div class="right-zone">
+        <button id="btnEs" class="lang-btn active" type="button" onclick="setLanguage('es')">ES</button>
+        <button id="btnEn" class="lang-btn" type="button" onclick="setLanguage('en')">EN</button>
+      </div>
     </div>
   </header>
 
@@ -516,8 +526,8 @@
           </p>
 
           <div class="hero-actions">
-            <a href="/premium" class="btn-main" id="btnViewPremium">Ver premium</a>
-            <a href="#free-picks" class="btn-secondary" id="btnViewPicks">Ver picks</a>
+            <a href="#free-picks" class="btn-main" id="btnViewPicks">Ver picks</a>
+            <a href="#bot" class="btn-secondary" id="btnViewBot">Ver bot</a>
           </div>
         </div>
 
@@ -569,18 +579,26 @@
         Accede al bot oficial para recibir contenido, análisis y herramientas de ProHeat Sports.
       </div>
 
-      <div class="card two-col">
+      <div class="card bot-grid">
+        <div class="bot-image-wrap">
+          <img src="/static/imagenbot.png" alt="Bot ProHeat Sports" class="bot-image">
+        </div>
+
         <div class="info-box">
           <h3 id="botBoxTitle">Bot oficial</h3>
           <p id="botBoxText">
             Usa el bot de ProHeat Sports para consultar contenido exclusivo, navegar por secciones y acceder a herramientas deportivas desde Telegram.
           </p>
-          <a class="btn-main" href="https://t.me/ProHeatSports_Bot" target="_blank" rel="noopener noreferrer" id="botButton">
-            Abrir bot
-          </a>
-        </div>
 
-        <div class="info-box">
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin:18px 0 20px;">
+            <a class="btn-main" href="https://t.me/ProHeatSports_Bot" target="_blank" rel="noopener noreferrer" id="botButton">
+              Abrir bot
+            </a>
+            <a class="btn-secondary" href="https://t.me/proheatsports" target="_blank" rel="noopener noreferrer" id="botChannelButton">
+              Ver canal
+            </a>
+          </div>
+
           <h3 id="botFeaturesTitle">Qué puedes encontrar</h3>
           <ul>
             <li id="botFeature1">Acceso rápido a contenido y secciones ProHeat.</li>
@@ -643,13 +661,13 @@
 
     const i18n = {
       es: {
-        navPremium: "Premium",
         menuButton: "☰ Menú",
         menuHome: "Home",
         menuPredictions: "Predicciones gratis",
         menuVideoPick: "VideoPick",
         menuBot: "Bot",
         menuContact: "Contacto",
+        menuPremium: "Premium",
 
         heroLine1: "Predicciones",
         heroLine2: "deportivas con",
@@ -659,8 +677,8 @@
         heroDescription:
           "ProHeat Sports integra picks públicos, contenido premium y panel administrativo desde una sola infraestructura. Todo alimentado directamente desde el backend central de ProHeat.",
 
-        btnViewPremium: "Ver premium",
         btnViewPicks: "Ver picks",
+        btnViewBot: "Ver bot",
 
         matchCenterTitle: "Match Center",
         btnGoFreePicks: "Ir a picks gratuitas",
@@ -683,6 +701,7 @@
         botBoxTitle: "Bot oficial",
         botBoxText: "Usa el bot de ProHeat Sports para consultar contenido exclusivo, navegar por secciones y acceder a herramientas deportivas desde Telegram.",
         botButton: "Abrir bot",
+        botChannelButton: "Ver canal",
         botFeaturesTitle: "Qué puedes encontrar",
         botFeature1: "Acceso rápido a contenido y secciones ProHeat.",
         botFeature2: "Herramientas y navegación centralizada.",
@@ -701,13 +720,13 @@
       },
 
       en: {
-        navPremium: "Premium",
         menuButton: "☰ Menu",
         menuHome: "Home",
         menuPredictions: "Free predictions",
         menuVideoPick: "VideoPick",
         menuBot: "Bot",
         menuContact: "Contact",
+        menuPremium: "Premium",
 
         heroLine1: "Sports",
         heroLine2: "predictions with",
@@ -717,8 +736,8 @@
         heroDescription:
           "ProHeat Sports brings together public picks, premium content, and an admin panel within a single infrastructure. Everything is powered directly from the central ProHeat backend.",
 
-        btnViewPremium: "View premium",
         btnViewPicks: "View picks",
+        btnViewBot: "View bot",
 
         matchCenterTitle: "Match Center",
         btnGoFreePicks: "Go to free picks",
@@ -741,6 +760,7 @@
         botBoxTitle: "Official bot",
         botBoxText: "Use the ProHeat Sports bot to explore exclusive content, browse sections, and access sports tools from Telegram.",
         botButton: "Open bot",
+        botChannelButton: "View channel",
         botFeaturesTitle: "What you can find",
         botFeature1: "Fast access to ProHeat content and sections.",
         botFeature2: "Tools and centralized navigation.",
@@ -764,13 +784,11 @@
     }
 
     function toggleMenu() {
-      const menu = document.getElementById("menuList");
-      menu.classList.toggle("show");
+      document.getElementById("menuList").classList.toggle("show");
     }
 
     function closeMenu() {
-      const menu = document.getElementById("menuList");
-      menu.classList.remove("show");
+      document.getElementById("menuList").classList.remove("show");
     }
 
     window.addEventListener("click", (event) => {
@@ -793,13 +811,13 @@
     function applyLanguage() {
       document.documentElement.lang = currentLanguage;
 
-      document.getElementById("navPremium").textContent = t("navPremium");
       document.getElementById("menuButton").textContent = t("menuButton");
       document.getElementById("menuHome").textContent = t("menuHome");
       document.getElementById("menuPredictions").textContent = t("menuPredictions");
       document.getElementById("menuVideoPick").textContent = t("menuVideoPick");
       document.getElementById("menuBot").textContent = t("menuBot");
       document.getElementById("menuContact").textContent = t("menuContact");
+      document.getElementById("menuPremium").textContent = t("menuPremium");
 
       document.getElementById("heroLine1").textContent = t("heroLine1");
       document.getElementById("heroLine2").textContent = t("heroLine2");
@@ -807,8 +825,8 @@
       document.getElementById("heroLine4").textContent = t("heroLine4");
       document.getElementById("heroDescription").textContent = t("heroDescription");
 
-      document.getElementById("btnViewPremium").textContent = t("btnViewPremium");
       document.getElementById("btnViewPicks").textContent = t("btnViewPicks");
+      document.getElementById("btnViewBot").textContent = t("btnViewBot");
 
       document.getElementById("matchCenterTitle").textContent = t("matchCenterTitle");
       document.getElementById("btnGoFreePicks").textContent = t("btnGoFreePicks");
@@ -824,6 +842,7 @@
       document.getElementById("botBoxTitle").textContent = t("botBoxTitle");
       document.getElementById("botBoxText").textContent = t("botBoxText");
       document.getElementById("botButton").textContent = t("botButton");
+      document.getElementById("botChannelButton").textContent = t("botChannelButton");
       document.getElementById("botFeaturesTitle").textContent = t("botFeaturesTitle");
       document.getElementById("botFeature1").textContent = t("botFeature1");
       document.getElementById("botFeature2").textContent = t("botFeature2");
