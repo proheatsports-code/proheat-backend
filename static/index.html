@@ -308,17 +308,34 @@
       font-size: 16px;
     }
 
-    .video-wrap {
+    .video-split {
       display: grid;
-      gap: 18px;
+      grid-template-columns: 1fr 420px;
+      gap: 22px;
+      align-items: center;
+    }
+
+    .video-text-box {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .video-box {
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .video-box video {
       width: 100%;
+      max-width: 420px;
       border-radius: 18px;
       border: 1px solid rgba(255,120,0,0.14);
       background: #000;
       display: block;
+      box-shadow: 0 0 14px rgba(255,140,0,0.08);
     }
 
     .video-title {
@@ -427,12 +444,21 @@
     @media (max-width: 1080px) {
       .hero-grid,
       .two-col,
-      .bot-grid {
+      .bot-grid,
+      .video-split {
         grid-template-columns: 1fr;
       }
 
       .hero-copy h1 {
         font-size: 58px;
+      }
+
+      .video-box {
+        order: 2;
+      }
+
+      .video-text-box {
+        order: 1;
       }
     }
 
@@ -566,7 +592,7 @@
         Mira el videopick destacado del día con reproducción automática en silencio.
       </div>
 
-      <div class="card video-wrap" id="videoPickContainer">
+      <div class="card" id="videoPickContainer">
         <div class="muted" id="loadingVideoText">Cargando VideoPick...</div>
       </div>
     </section>
@@ -949,14 +975,16 @@
       }
 
       container.innerHTML = `
-        <div class="video-box">
-          <video id="videoPickPlayer" autoplay muted loop playsinline controls preload="auto">
-            <source src="${escapeHtml(videoUrl)}" type="video/mp4">
-          </video>
-        </div>
-        <div>
-          <div class="video-title">${escapeHtml(title)}</div>
-          <div class="video-desc">${escapeHtml(description)}</div>
+        <div class="video-split">
+          <div class="video-text-box">
+            <div class="video-title">${escapeHtml(title)}</div>
+            <div class="video-desc">${escapeHtml(description)}</div>
+          </div>
+          <div class="video-box">
+            <video id="videoPickPlayer" autoplay muted loop playsinline controls preload="auto">
+              <source src="${escapeHtml(videoUrl)}" type="video/mp4">
+            </video>
+          </div>
         </div>
       `;
 
