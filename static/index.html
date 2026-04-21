@@ -49,6 +49,31 @@ input{
 .hidden{
   display:none;
 }
+
+.message{
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:10px;
+  background:#1a1a1a;
+  border:1px solid #333;
+  white-space:pre-wrap;
+  line-height:1.5;
+}
+
+.success{
+  border-color:#1f7a3a;
+  color:#9cffb5;
+}
+
+.error{
+  border-color:#8b2c2c;
+  color:#ffaaaa;
+}
+
+.warning{
+  border-color:#8a6a1d;
+  color:#ffd27a;
+}
 </style>
 </head>
 
@@ -64,6 +89,7 @@ input{
     <input type="email" id="email" placeholder="Correo">
     <input type="password" id="password" placeholder="Contraseña">
     <button class="btn" onclick="login()">Entrar</button>
+    <div id="loginMessage" class="message hidden"></div>
   </div>
 
   <!-- USUARIO -->
@@ -74,6 +100,7 @@ input{
     <h3>Premium 30 días - $110 MXN</h3>
 
     <div id="paypal-button-container"></div>
+    <div id="paypalMessage" class="message hidden"></div>
 
     <button class="btn" onclick="logout()">Cerrar sesión</button>
   </div>
@@ -81,8 +108,20 @@ input{
 </div>
 
 <script>
-
 const API = window.location.origin;
+
+function showMessage(id, text, type = "warning"){
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = `message ${type}`;
+  el.classList.remove("hidden");
+}
+
+function hideMessage(id){
+  const el = document.getElementById(id);
+  el.textContent = "";
+  el.className = "message hidden";
+}
 
 function saveToken(token){
   localStorage.setItem("token", token);
@@ -98,78 +137,135 @@ function logout(){
 }
 
 async function login(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  hideMessage("loginMessage");
 
-  const res = await fetch(API + "/login", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ email, password })
-  });
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-  const data = await res.json();
-
-  if(!res.ok){
-    alert(data.detail);
+  if(!email || !password){
+    showMessage("loginMessage", "Ingresa correo y contraseña.", "error");
     return;
   }
 
-  saveToken(data.token);
+  try {
+    const res = await fetch(API + "/login", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ email, password })
+    });
 
-  document.getElementById("loginBox").classList.add("hidden");
-  document.getElementById("userBox").classList.remove("hidden");
+    const data = await res.json();
 
-  document.getElementById("userInfo").innerText =
-    data.name + " (" + data.status + ")";
+    if(!res.ok){
+      showMessage("loginMessage", data.detail || "No se pudo iniciar sesión.", "error");
+      return;
+    }
 
-  initPayPal();
+    saveToken(data.token);
+
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("userBox").classList.remove("hidden");
+
+    document.getElementById("userInfo").innerText =
+      `${data.name} (${data.status})`;
+
+    initPayPal();
+  } catch (error) {
+    showMessage("loginMessage", "Error de conexión al iniciar sesión.", "error");
+  }
 }
 
 function initPayPal(){
+  hideMessage("paypalMessage");
+
+  const token = getToken();
+  if (!token) {
+    showMessage("paypalMessage", "No hay sesión activa. Inicia sesión nuevamente.", "error");
+    return;
+  }
+
+  const container = document.getElementById("paypal-button-container");
+  container.innerHTML = "";
 
   paypal.Buttons({
 
     createOrder: async function(){
+      try {
+        showMessage("paypalMessage", "Creando orden PayPal...", "warning");
 
-      const res = await fetch(API + "/paypal/create-order", {
-        method:"POST",
-        headers:{
-          "Authorization":"Bearer " + getToken()
+        const res = await fetch(API + "/paypal/create-order", {
+          method:"POST",
+          headers:{
+            "Authorization":"Bearer " + getToken()
+          }
+        });
+
+        const data = await res.json();
+
+        if(!res.ok){
+          const detail = data?.detail || JSON.stringify(data);
+          showMessage("paypalMessage", "Error creando orden:\n" + detail, "error");
+          throw new Error(detail);
         }
-      });
 
-      const data = await res.json();
-
-      if(!res.ok){
-        alert("Error creando orden");
-        throw new Error();
+        showMessage("paypalMessage", "Orden PayPal creada correctamente.", "success");
+        return data.id;
+      } catch (error) {
+        console.error("createOrder error:", error);
+        showMessage("paypalMessage", "Error creando orden:\n" + (error?.message || error), "error");
+        throw error;
       }
-
-      return data.id;
     },
 
     onApprove: async function(data){
+      try {
+        showMessage("paypalMessage", "Capturando pago y activando membresía...", "warning");
 
-      const res = await fetch(API + "/paypal/capture-order/" + data.orderID, {
-        method:"POST",
-        headers:{
-          "Authorization":"Bearer " + getToken()
+        const res = await fetch(API + "/paypal/capture-order/" + data.orderID, {
+          method:"POST",
+          headers:{
+            "Authorization":"Bearer " + getToken()
+          }
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          showMessage(
+            "paypalMessage",
+            "Error capturando pago:\n" + (result?.detail || JSON.stringify(result)),
+            "error"
+          );
+          return;
         }
-      });
 
-      const result = await res.json();
-
-      if(result.status === "ok"){
-        alert("✅ Pago exitoso. Membresía activada.");
-        location.reload();
-      }else{
-        alert("⚠️ Pago no completado");
+        if(result.status === "ok"){
+          showMessage("paypalMessage", "✅ Pago exitoso. Membresía activada.", "success");
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          showMessage(
+            "paypalMessage",
+            "⚠️ Pago no completado:\n" + (result?.message || "Sin detalle."),
+            "warning"
+          );
+        }
+      } catch (error) {
+        console.error("captureOrder error:", error);
+        showMessage("paypalMessage", "Error capturando pago:\n" + (error?.message || error), "error");
       }
     },
 
+    onCancel: function(){
+      showMessage("paypalMessage", "Pago cancelado por el usuario.", "warning");
+    },
+
     onError: function(err){
-      console.error(err);
-      alert("❌ Error en PayPal");
+      console.error("PayPal onError:", err);
+      showMessage(
+        "paypalMessage",
+        "❌ Error en PayPal:\n" + (err?.message || err?.toString?.() || "Sin detalle."),
+        "error"
+      );
     }
 
   }).render("#paypal-button-container");
@@ -183,11 +279,11 @@ function checkSession(){
   document.getElementById("loginBox").classList.add("hidden");
   document.getElementById("userBox").classList.remove("hidden");
 
+  showMessage("paypalMessage", "Sesión restaurada. Listo para pagar.", "success");
   initPayPal();
 }
 
 checkSession();
-
 </script>
 
 </body>
