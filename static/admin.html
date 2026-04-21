@@ -116,7 +116,7 @@
       margin-bottom: 12px;
     }
 
-    input, select {
+    input, select, textarea {
       width: 100%;
       padding: 11px 12px;
       border-radius: 12px;
@@ -125,6 +125,14 @@
       color: white;
       outline: none;
       margin-bottom: 10px;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.5;
     }
 
     input[type="file"] {
@@ -278,6 +286,15 @@
       line-height: 1.5;
     }
 
+    .video-preview {
+      width: 100%;
+      max-width: 280px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,120,0,0.18);
+      background: #000;
+      margin-top: 10px;
+    }
+
     @media (max-width: 980px) {
       .grid {
         grid-template-columns: 1fr;
@@ -336,6 +353,28 @@
           <div id="excelSummary" class="summary-box hidden"></div>
         </div>
 
+        <div class="card hidden" id="videopickCard">
+          <h2>Subir VideoPick</h2>
+          <div class="small" style="margin-bottom:12px;">
+            Sube un video con su texto para mostrarlo debajo de la sección de picks gratuitas.
+            El nuevo VideoPick quedará activo automáticamente.
+          </div>
+
+          <label for="videopickTitle">Título</label>
+          <input type="text" id="videopickTitle" placeholder="Ej. VideoPick del día" />
+
+          <label for="videopickDescription">Texto / descripción</label>
+          <textarea id="videopickDescription" placeholder="Escribe aquí el análisis, recomendación o contexto del video..."></textarea>
+
+          <label for="videopickFile">Archivo de video</label>
+          <input type="file" id="videopickFile" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v" />
+
+          <button class="btn btn-primary" onclick="uploadVideoPick()">Subir VideoPick</button>
+
+          <div id="videopickMessage" class="message hidden"></div>
+          <video id="videopickPreview" class="video-preview hidden" controls muted playsinline></video>
+        </div>
+
         <div class="card hidden" id="subadminCard">
           <h2>Crear subadmin</h2>
 
@@ -363,6 +402,7 @@
             <button class="btn btn-secondary" onclick="loadPendingRequests()">Solicitudes</button>
             <button class="btn btn-secondary" onclick="loadUsers()">Usuarios</button>
             <button class="btn btn-secondary" onclick="loadAdmins()">Admins</button>
+            <button class="btn btn-secondary" onclick="loadVideoPicks()">VideoPicks</button>
           </div>
 
           <div class="toolbar">
@@ -444,6 +484,7 @@
 
       document.getElementById("sessionCard").classList.toggle("hidden", !loggedIn);
       document.getElementById("excelCard").classList.toggle("hidden", !loggedIn);
+      document.getElementById("videopickCard").classList.toggle("hidden", !loggedIn);
       document.getElementById("adminPanel").classList.toggle("hidden", !loggedIn);
 
       if (loggedIn) {
@@ -574,6 +615,85 @@
       }
     }
 
+    async function uploadVideoPick() {
+      hideMessage("videopickMessage");
+
+      const title = document.getElementById("videopickTitle").value.trim();
+      const description = document.getElementById("videopickDescription").value.trim();
+      const fileInput = document.getElementById("videopickFile");
+      const file = fileInput.files[0];
+
+      if (!title) {
+        showMessage("videopickMessage", "Escribe un título para el VideoPick.", "error");
+        return;
+      }
+
+      if (!description) {
+        showMessage("videopickMessage", "Escribe el texto o descripción del VideoPick.", "error");
+        return;
+      }
+
+      if (!file) {
+        showMessage("videopickMessage", "Selecciona un archivo de video.", "error");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("video", file);
+
+      try {
+        showMessage("videopickMessage", "Subiendo VideoPick...", "warning");
+
+        const response = await fetch(`${API_BASE}/admin/upload-videopick`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${getAdminToken()}`
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("videopickMessage", data.detail || "No se pudo subir el VideoPick.", "error");
+          return;
+        }
+
+        showMessage("videopickMessage", data.message || "VideoPick subido correctamente.", "success");
+        document.getElementById("videopickTitle").value = "";
+        document.getElementById("videopickDescription").value = "";
+        document.getElementById("videopickFile").value = "";
+        hideVideoPreview();
+        loadVideoPicks();
+      } catch (error) {
+        showMessage("videopickMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
+    function previewVideoPickFile() {
+      const file = document.getElementById("videopickFile").files[0];
+      const preview = document.getElementById("videopickPreview");
+
+      if (!file) {
+        hideVideoPreview();
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      preview.src = url;
+      preview.classList.remove("hidden");
+    }
+
+    function hideVideoPreview() {
+      const preview = document.getElementById("videopickPreview");
+      preview.pause();
+      preview.removeAttribute("src");
+      preview.load();
+      preview.classList.add("hidden");
+    }
+
     async function createSubadmin() {
       hideMessage("subadminMessage");
 
@@ -613,6 +733,7 @@
       if (s === "pending") return `<span class="pill pill-yellow">pending</span>`;
       if (s === "expired") return `<span class="pill pill-red">expired</span>`;
       if (s === "reviewed") return `<span class="pill pill-green">reviewed</span>`;
+      if (s === "inactive") return `<span class="pill pill-red">inactive</span>`;
       return `<span class="pill">${escapeHtml(status || "N/A")}</span>`;
     }
 
@@ -811,6 +932,68 @@
       }
     }
 
+    async function loadVideoPicks() {
+      try {
+        const response = await fetch(`${API_BASE}/admin/video-picks`, {
+          headers: getAdminHeaders(false)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setTable("VideoPicks", `<div class="summary-box">${escapeHtml(data.detail || "No se pudieron cargar los VideoPicks.")}</div>`);
+          return;
+        }
+
+        const items = data.items || [];
+
+        if (!items.length) {
+          setTable("VideoPicks", `<div class="summary-box">No hay VideoPicks cargados.</div>`);
+          return;
+        }
+
+        let html = `<table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Título</th>
+              <th>Descripción</th>
+              <th>Video</th>
+              <th>Estado</th>
+              <th>Creado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+        items.forEach(item => {
+          html += `
+            <tr>
+              <td>${escapeHtml(item.video_id || item.id || "")}</td>
+              <td>${escapeHtml(item.title || "")}</td>
+              <td>${escapeHtml(item.description || "")}</td>
+              <td>
+                ${item.video_url ? `<a href="${API_BASE}${item.video_url}" target="_blank" style="color:orange;">Ver video</a>` : ""}
+              </td>
+              <td>${statusPill(item.status || (item.is_active ? 'active' : 'inactive'))}</td>
+              <td>${escapeHtml(item.created_at || "")}</td>
+              <td>
+                <div class="action-group">
+                  <button class="btn btn-secondary" onclick="activateVideoPick('${escapeHtml(item.video_id || item.id || '')}')">Activar</button>
+                  <button class="btn btn-danger" onclick="deleteVideoPick('${escapeHtml(item.video_id || item.id || '')}')">Eliminar</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `</tbody></table>`;
+        setTable("VideoPicks", html);
+      } catch (error) {
+        setTable("VideoPicks", `<div class="summary-box">Error de conexión: ${escapeHtml(error)}</div>`);
+      }
+    }
+
     function setTargetUserId(userId) {
       document.getElementById("targetUserId").value = userId;
       showMessage("actionMessage", `User ID cargado: ${userId}`, "success");
@@ -930,6 +1113,53 @@
       }
     }
 
+    async function activateVideoPick(videoId) {
+      if (!videoId) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/video-picks/${encodeURIComponent(videoId)}/activate`, {
+          method: "POST",
+          headers: getAdminHeaders(false)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("actionMessage", data.detail || "No se pudo activar el VideoPick.", "error");
+          return;
+        }
+
+        showMessage("actionMessage", data.message || `VideoPick activado: ${videoId}`, "success");
+        loadVideoPicks();
+      } catch (error) {
+        showMessage("actionMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
+    async function deleteVideoPick(videoId) {
+      if (!videoId) return;
+      if (!confirm(`¿Eliminar VideoPick ${videoId}?`)) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/video-picks/${encodeURIComponent(videoId)}`, {
+          method: "DELETE",
+          headers: getAdminHeaders(false)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("actionMessage", data.detail || "No se pudo eliminar el VideoPick.", "error");
+          return;
+        }
+
+        showMessage("actionMessage", data.message || `VideoPick eliminado: ${videoId}`, "success");
+        loadVideoPicks();
+      } catch (error) {
+        showMessage("actionMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
     function approveDays(days) {
       const userId = document.getElementById("targetUserId").value.trim();
       if (!userId) {
@@ -973,6 +1203,8 @@
         loadPendingRequests();
       }
     }
+
+    document.getElementById("videopickFile").addEventListener("change", previewVideoPickFile);
 
     restoreAdminSession();
   </script>

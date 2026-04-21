@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional, Any
 
 import requests
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -31,6 +31,7 @@ STATIC_DIR = Path(os.getenv("PROHEAT_STATIC_DIR", BASE_DIR / "static"))
 UPLOADS_DIR = Path(os.getenv("PROHEAT_UPLOADS_DIR", BASE_DIR / "proof_uploads"))
 DB_PATH = Path(os.getenv("PROHEAT_DB_PATH", BASE_DIR / "proheat.db"))
 TEMP_UPLOADS_DIR = Path(os.getenv("PROHEAT_TEMP_UPLOADS_DIR", BASE_DIR / "temp_uploads"))
+VIDEO_UPLOADS_DIR = Path(os.getenv("PROHEAT_VIDEO_UPLOADS_DIR", BASE_DIR / "video_uploads"))
 
 DEFAULT_SUPERADMIN_NAME = os.getenv("DEFAULT_SUPERADMIN_NAME", "ProHeat Master Admin")
 DEFAULT_SUPERADMIN_EMAIL = os.getenv("DEFAULT_SUPERADMIN_EMAIL", "admin@proheatsports.com")
@@ -50,6 +51,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+VIDEO_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # =========================
 # FASTAPI
@@ -118,6 +120,8 @@ def ensure_dirs() -> None:
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     TEMP_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    VIDEO_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+VIDEO_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 def row_to_dict(row: Optional[sqlite3.Row]) -> dict[str, Any]:
     return dict(row) if row else {}
@@ -199,6 +203,21 @@ def init_db() -> None:
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY(user_id) REFERENCES users(user_id)
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS video_picks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        video_id TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        video_filename TEXT NOT NULL,
+        video_url TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
     )
     """)
 
@@ -505,6 +524,9 @@ if STATIC_DIR.exists():
 
 if UPLOADS_DIR.exists():
     app.mount("/proofs", StaticFiles(directory=str(UPLOADS_DIR)), name="proofs")
+
+if VIDEO_UPLOADS_DIR.exists():
+    app.mount("/videos", StaticFiles(directory=str(VIDEO_UPLOADS_DIR)), name="videos")
 
 @app.get("/", response_model=None)
 def root():
@@ -1218,6 +1240,152 @@ def list_admins(admin=Depends(require_superadmin)):
     conn.close()
     return {"items": items}
 
+
+# =========================
+# ADMIN VIDEO PICKS
+# =========================
+
+@app.post("/admin/upload-videopick")
+async def admin_upload_videopick(
+    title: str = Form(...),
+    description: str = Form(...),
+    video: UploadFile = File(...),
+    admin=Depends(require_admin)
+):
+    filename = video.filename or ""
+    suffix = Path(filename).suffix.lower()
+
+    if suffix not in {".mp4", ".mov", ".webm", ".m4v"}:
+        raise HTTPException(status_code=400, detail="Solo se permiten videos .mp4, .mov, .webm o .m4v.")
+
+    safe_name = Path(filename).name
+    stored_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}_{safe_name}"
+    save_path = VIDEO_UPLOADS_DIR / stored_name
+
+    try:
+        content = await video.read()
+        with open(save_path, "wb") as f:
+            f.write(content)
+
+        video_id = f"vp_{secrets.token_hex(6)}"
+        video_url = f"/videos/{stored_name}"
+        now_str = iso_now()
+
+        conn = db_connect()
+        cur = conn.cursor()
+        cur.execute("UPDATE video_picks SET is_active = 0, updated_at = ? WHERE is_active = 1", (now_str,))
+        cur.execute("""
+        INSERT INTO video_picks (
+            video_id, title, description, video_filename, video_url,
+            is_active, created_by, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            video_id,
+            title.strip(),
+            description.strip(),
+            safe_name,
+            video_url,
+            1,
+            admin["user_id"],
+            now_str,
+            now_str
+        ))
+        conn.commit()
+        conn.close()
+
+        write_admin_log(
+            admin_user_id=admin["user_id"],
+            action="upload_videopick",
+            details=f"video_id={video_id} file={stored_name}"
+        )
+
+        return {
+            "status": "ok",
+            "message": "VideoPick subido correctamente.",
+            "item": {
+                "video_id": video_id,
+                "title": title.strip(),
+                "description": description.strip(),
+                "video_url": video_url,
+                "video_filename": safe_name,
+                "is_active": True,
+                "created_at": now_str
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error subiendo VideoPick: {e}")
+
+@app.get("/admin/video-picks")
+def admin_list_video_picks(admin=Depends(require_admin)):
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+    SELECT video_id, title, description, video_filename, video_url, is_active, created_by, created_at, updated_at
+    FROM video_picks
+    ORDER BY datetime(created_at) DESC
+    """)
+    items = []
+    for row in cur.fetchall():
+        item = dict(row)
+        item["is_active"] = bool(item["is_active"])
+        items.append(item)
+    conn.close()
+    return {"items": items}
+
+@app.post("/admin/video-picks/{video_id}/activate")
+def admin_activate_video_pick(video_id: str, admin=Depends(require_admin)):
+    now_str = iso_now()
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM video_picks WHERE video_id = ?", (video_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="VideoPick no encontrado.")
+
+    cur.execute("UPDATE video_picks SET is_active = 0, updated_at = ? WHERE is_active = 1", (now_str,))
+    cur.execute("UPDATE video_picks SET is_active = 1, updated_at = ? WHERE video_id = ?", (now_str, video_id))
+    conn.commit()
+    conn.close()
+
+    write_admin_log(
+        admin_user_id=admin["user_id"],
+        action="activate_videopick",
+        details=f"video_id={video_id}"
+    )
+
+    return {"status": "ok", "message": "VideoPick activado correctamente.", "video_id": video_id}
+
+@app.delete("/admin/video-picks/{video_id}")
+def admin_delete_video_pick(video_id: str, admin=Depends(require_admin)):
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM video_picks WHERE video_id = ?", (video_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="VideoPick no encontrado.")
+
+    file_path = VIDEO_UPLOADS_DIR / Path(row["video_url"]).name
+    cur.execute("DELETE FROM video_picks WHERE video_id = ?", (video_id,))
+    conn.commit()
+    conn.close()
+
+    if file_path.exists():
+        try:
+            file_path.unlink()
+        except Exception:
+            pass
+
+    write_admin_log(
+        admin_user_id=admin["user_id"],
+        action="delete_videopick",
+        details=f"video_id={video_id}"
+    )
+
+    return {"status": "ok", "message": "VideoPick eliminado correctamente.", "video_id": video_id}
+
 # =========================
 # ADMIN EXCEL UPLOAD
 # =========================
@@ -1332,6 +1500,26 @@ def api_data_alta_confianza():
 def api_data_inferno():
     return {"items": get_section_items("inferno")}
 
+
+@app.get("/api/data/videopicks")
+def api_data_videopicks():
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+    SELECT video_id, title, description, video_filename, video_url, created_at
+    FROM video_picks
+    WHERE is_active = 1
+    ORDER BY datetime(created_at) DESC
+    LIMIT 1
+    """)
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return {"items": []}
+
+    return {"items": [dict(row)]}
+
 # =========================
 # HEALTH / DEBUG
 # =========================
@@ -1348,6 +1536,7 @@ def health():
         "latest_exists": latest_path.exists(),
         "uploads_dir": str(UPLOADS_DIR),
         "temp_uploads_dir": str(TEMP_UPLOADS_DIR),
+        "video_uploads_dir": str(VIDEO_UPLOADS_DIR),
         "static_dir": str(STATIC_DIR),
         "paypal_configured": bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET),
         "paypal_client_id_present": bool(PAYPAL_CLIENT_ID),

@@ -607,6 +607,58 @@
       margin-top: 14px;
     }
 
+    .videopick-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.18);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 0 18px rgba(255,120,0,0.06);
+    }
+
+    .videopick-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .videopick-player {
+      width: 100%;
+      border-radius: 18px;
+      border: 1px solid rgba(255,120,0,0.18);
+      background: #000;
+      box-shadow: 0 0 18px rgba(255,120,0,0.08);
+    }
+
+    .videopick-meta {
+      color: orange;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .videopick-title {
+      margin: 0 0 12px;
+      font-size: 30px;
+      color: white;
+    }
+
+    .videopick-description {
+      color: #d8d8d8;
+      line-height: 1.65;
+      font-size: 16px;
+      white-space: pre-line;
+    }
+
+    .videopick-empty {
+      color: #cfcfcf;
+      border: 1px dashed rgba(255,120,0,0.25);
+      border-radius: 18px;
+      padding: 24px;
+      background: rgba(255,255,255,0.02);
+    }
+
+
     @media (max-width: 1200px) {
       .brand-text { font-size: 26px; }
       .hero-title { font-size: 60px; }
@@ -630,7 +682,7 @@
         padding-right: 26px;
       }
       .hero-title { font-size: 46px; }
-      .auth-grid, .contact-grid { grid-template-columns: 1fr; }
+      .auth-grid, .contact-grid, .videopick-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 700px) {
@@ -657,6 +709,7 @@
     <div class="menu">
       <a href="#home">Home</a>
       <a href="#predicciones">Predicciones</a>
+      <a href="#videopick">VideoPick</a>
       <a href="#premium">Premium</a>
       <a href="#bot-proheat">Bot</a>
       <a href="#contacto">Contacto</a>
@@ -715,6 +768,17 @@
         <div class="prediction-match">Esperando predicciones</div>
         <div class="prediction-pick">Un momento...</div>
       </div>
+    </div>
+  </section>
+
+  <section class="content-section" id="videopick">
+    <h2 class="section-title">Video<span>Pick</span></h2>
+    <div class="section-subtitle">
+      Aquí aparecerá el video destacado cargado desde el backend junto con su texto explicativo.
+    </div>
+
+    <div class="videopick-box" id="videoPickContainer">
+      <div class="videopick-empty">Cargando VideoPick...</div>
     </div>
   </section>
 
@@ -957,6 +1021,34 @@
       heroCards.appendChild(heroButton);
     }
 
+    function renderVideoPick(items) {
+      const container = document.getElementById("videoPickContainer");
+
+      if (!items || !items.length) {
+        container.innerHTML = `<div class="videopick-empty">Aún no hay un VideoPick activo.</div>`;
+        return;
+      }
+
+      const item = items[0];
+      const videoUrl = `${DATA_API_BASE}${item.video_url || ""}`;
+
+      container.innerHTML = `
+        <div class="videopick-grid">
+          <div>
+            <video class="videopick-player" controls preload="metadata" playsinline>
+              <source src="${escapeHtml(videoUrl)}">
+              Tu navegador no soporta la reproducción de video.
+            </video>
+          </div>
+          <div>
+            <div class="videopick-meta">VideoPick destacado · ${escapeHtml(item.created_at || "")}</div>
+            <h3 class="videopick-title">${escapeHtml(item.title || "VideoPick")}</h3>
+            <div class="videopick-description">${escapeHtml(item.description || "")}</div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderTable(rows) {
       if (!rows || !rows.length) {
         return `<div class="premium-note">No hay datos disponibles.</div>`;
@@ -1052,6 +1144,17 @@
       } catch (error) {
         console.error(error);
         status.textContent = "No se pudieron cargar los picks públicos desde la API.";
+      }
+    }
+
+    async function loadVideoPickFromApi() {
+      try {
+        const rows = await fetchDataSection("/api/data/videopicks");
+        renderVideoPick(rows);
+      } catch (error) {
+        console.error(error);
+        const container = document.getElementById("videoPickContainer");
+        container.innerHTML = `<div class="videopick-empty">No se pudo cargar el VideoPick desde la API.</div>`;
       }
     }
 
@@ -1490,6 +1593,7 @@
 
     async function bootApp() {
       await loadPublicFromApi();
+      await loadVideoPickFromApi();
       await loadPremiumFromApi();
       restoreSession();
     }
