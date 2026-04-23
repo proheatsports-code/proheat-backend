@@ -219,7 +219,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 900px;
+      min-width: 1000px;
       background: rgba(0,0,0,0.18);
     }
 
@@ -365,8 +365,7 @@
         <div class="card hidden" id="videopickCard">
           <h2>Subir VideoPick</h2>
           <div class="small" style="margin-bottom:12px;">
-            Sube un video con su texto para mostrarlo debajo de la sección de picks gratuitas.
-            El nuevo VideoPick quedará activo automáticamente.
+            Sube un video con su texto para mostrarlo en la sección VideoPick del home.
           </div>
 
           <label for="videopickTitle">Título</label>
@@ -382,6 +381,25 @@
 
           <div id="videopickMessage" class="message hidden"></div>
           <video id="videopickPreview" class="video-preview hidden" controls muted playsinline></video>
+        </div>
+
+        <div class="card hidden" id="freePicksVideoCard">
+          <h2>Subir video lateral de Picks Gratuitas</h2>
+          <div class="small" style="margin-bottom:12px;">
+            Sube el video decorativo que aparecerá del lado derecho de la sección Picks Gratuitas.
+            Se reproducirá automáticamente, en silencio y en loop.
+          </div>
+
+          <label for="freePicksVideoTitle">Título interno</label>
+          <input type="text" id="freePicksVideoTitle" placeholder="Ej. Promo lateral picks gratuitas" />
+
+          <label for="freePicksVideoFile">Archivo de video</label>
+          <input type="file" id="freePicksVideoFile" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v" />
+
+          <button class="btn btn-primary" onclick="uploadFreePicksVideo()">Subir video lateral</button>
+
+          <div id="freePicksVideoMessage" class="message hidden"></div>
+          <video id="freePicksVideoPreview" class="video-preview hidden" controls muted playsinline></video>
         </div>
 
         <div class="card hidden" id="subadminCard">
@@ -412,6 +430,7 @@
             <button class="btn btn-secondary" onclick="loadUsers()">Usuarios</button>
             <button class="btn btn-secondary" onclick="loadAdmins()">Admins</button>
             <button class="btn btn-secondary" onclick="loadVideoPicks()">VideoPicks</button>
+            <button class="btn btn-secondary" onclick="loadFreePicksVideo()">Video lateral picks</button>
           </div>
 
           <div class="toolbar">
@@ -454,13 +473,8 @@
       const headers = {};
       const token = getAdminToken();
 
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      if (isJson) {
-        headers["Content-Type"] = "application/json";
-      }
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (isJson) headers["Content-Type"] = "application/json";
 
       return headers;
     }
@@ -494,6 +508,7 @@
       document.getElementById("sessionCard").classList.toggle("hidden", !loggedIn);
       document.getElementById("excelCard").classList.toggle("hidden", !loggedIn);
       document.getElementById("videopickCard").classList.toggle("hidden", !loggedIn);
+      document.getElementById("freePicksVideoCard").classList.toggle("hidden", !loggedIn);
       document.getElementById("adminPanel").classList.toggle("hidden", !loggedIn);
 
       if (loggedIn) {
@@ -513,11 +528,7 @@
     function getSavedSession() {
       const raw = localStorage.getItem("proheat_admin_session");
       if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return null;
-      }
+      try { return JSON.parse(raw); } catch { return null; }
     }
 
     function saveSession(data) {
@@ -570,9 +581,7 @@
       hideMessage("excelMessage");
       document.getElementById("excelSummary").classList.add("hidden");
 
-      const fileInput = document.getElementById("excelFile");
-      const file = fileInput.files[0];
-
+      const file = document.getElementById("excelFile").files[0];
       if (!file) {
         showMessage("excelMessage", "Selecciona un archivo Excel.", "error");
         return;
@@ -586,9 +595,7 @@
 
         const response = await fetch(`${API_BASE}/admin/upload-excel`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${getAdminToken()}`
-          },
+          headers: { "Authorization": `Bearer ${getAdminToken()}` },
           body: formData
         });
 
@@ -606,7 +613,6 @@
           <strong>Archivo:</strong> ${escapeHtml(data.source_file || "")}<br>
           <strong>Fecha detectada:</strong> ${escapeHtml(data.date || "")}<br>
           <strong>Generado:</strong> ${escapeHtml(data.generated_at || "")}<br><br>
-
           <strong>Registros cargados:</strong><br>
           - General: ${escapeHtml(counts.general ?? 0)}<br>
           - Ultra: ${escapeHtml(counts.ultra ?? 0)}<br>
@@ -629,21 +635,10 @@
 
       const title = document.getElementById("videopickTitle").value.trim();
       const description = document.getElementById("videopickDescription").value.trim();
-      const fileInput = document.getElementById("videopickFile");
-      const file = fileInput.files[0];
+      const file = document.getElementById("videopickFile").files[0];
 
-      if (!title) {
-        showMessage("videopickMessage", "Escribe un título para el VideoPick.", "error");
-        return;
-      }
-
-      if (!description) {
-        showMessage("videopickMessage", "Escribe el texto o descripción del VideoPick.", "error");
-        return;
-      }
-
-      if (!file) {
-        showMessage("videopickMessage", "Selecciona un archivo de video.", "error");
+      if (!title || !description || !file) {
+        showMessage("videopickMessage", "Completa título, descripción y video.", "error");
         return;
       }
 
@@ -657,9 +652,7 @@
 
         const response = await fetch(`${API_BASE}/admin/upload-videopick`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${getAdminToken()}`
-          },
+          headers: { "Authorization": `Bearer ${getAdminToken()}` },
           body: formData
         });
 
@@ -674,19 +667,60 @@
         document.getElementById("videopickTitle").value = "";
         document.getElementById("videopickDescription").value = "";
         document.getElementById("videopickFile").value = "";
-        hideVideoPreview();
+        hideVideoPreview("videopickPreview");
         loadVideoPicks();
       } catch (error) {
         showMessage("videopickMessage", `Error de conexión: ${error}`, "error");
       }
     }
 
-    function previewVideoPickFile() {
-      const file = document.getElementById("videopickFile").files[0];
-      const preview = document.getElementById("videopickPreview");
+    async function uploadFreePicksVideo() {
+      hideMessage("freePicksVideoMessage");
+
+      const title = document.getElementById("freePicksVideoTitle").value.trim();
+      const file = document.getElementById("freePicksVideoFile").files[0];
+
+      if (!title || !file) {
+        showMessage("freePicksVideoMessage", "Completa el título y selecciona un video.", "error");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("video", file);
+
+      try {
+        showMessage("freePicksVideoMessage", "Subiendo video lateral...", "warning");
+
+        const response = await fetch(`${API_BASE}/admin/upload-free-picks-video`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${getAdminToken()}` },
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("freePicksVideoMessage", data.detail || "No se pudo subir el video lateral.", "error");
+          return;
+        }
+
+        showMessage("freePicksVideoMessage", data.message || "Video lateral subido correctamente.", "success");
+        document.getElementById("freePicksVideoTitle").value = "";
+        document.getElementById("freePicksVideoFile").value = "";
+        hideVideoPreview("freePicksVideoPreview");
+        loadFreePicksVideo();
+      } catch (error) {
+        showMessage("freePicksVideoMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
+    function previewVideoFile(inputId, previewId) {
+      const file = document.getElementById(inputId).files[0];
+      const preview = document.getElementById(previewId);
 
       if (!file) {
-        hideVideoPreview();
+        hideVideoPreview(previewId);
         return;
       }
 
@@ -695,8 +729,8 @@
       preview.classList.remove("hidden");
     }
 
-    function hideVideoPreview() {
-      const preview = document.getElementById("videopickPreview");
+    function hideVideoPreview(previewId) {
+      const preview = document.getElementById(previewId);
       preview.pause();
       preview.removeAttribute("src");
       preview.load();
@@ -737,7 +771,6 @@
 
     function statusPill(status) {
       const s = String(status || "").toLowerCase();
-
       if (s === "active") return `<span class="pill pill-green">active</span>`;
       if (s === "pending") return `<span class="pill pill-yellow">pending</span>`;
       if (s === "expired") return `<span class="pill pill-red">expired</span>`;
@@ -748,8 +781,7 @@
 
     function clearTable() {
       document.getElementById("tableTitle").textContent = "Información";
-      document.getElementById("tableContainer").innerHTML =
-        `<div class="summary-box">Panel limpio.</div>`;
+      document.getElementById("tableContainer").innerHTML = `<div class="summary-box">Panel limpio.</div>`;
     }
 
     function setTable(title, html) {
@@ -762,7 +794,6 @@
         const response = await fetch(`${API_BASE}/admin/pending-requests`, {
           headers: getAdminHeaders(false)
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -771,25 +802,14 @@
         }
 
         const items = data.items || [];
-
         if (!items.length) {
           setTable("Solicitudes", `<div class="summary-box">No hay solicitudes registradas.</div>`);
           return;
         }
 
-        let html = `<table>
-          <thead>
-            <tr>
-              <th>Request ID</th>
-              <th>Usuario</th>
-              <th>Correo</th>
-              <th>Archivo</th>
-              <th>Estado</th>
-              <th>Creado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>`;
+        let html = `<table><thead><tr>
+          <th>Request ID</th><th>Usuario</th><th>Correo</th><th>Archivo</th><th>Estado</th><th>Creado</th><th>Acciones</th>
+        </tr></thead><tbody>`;
 
         items.forEach(item => {
           html += `
@@ -828,7 +848,6 @@
         const response = await fetch(`${API_BASE}/admin/users`, {
           headers: getAdminHeaders(false)
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -837,26 +856,14 @@
         }
 
         const items = data.items || [];
-
         if (!items.length) {
           setTable("Usuarios", `<div class="summary-box">No hay usuarios.</div>`);
           return;
         }
 
-        let html = `<table>
-          <thead>
-            <tr>
-              <th>User ID</th>
-              <th>Nombre</th>
-              <th>Correo</th>
-              <th>Rol</th>
-              <th>Membresía</th>
-              <th>Inicio</th>
-              <th>Fin</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>`;
+        let html = `<table><thead><tr>
+          <th>User ID</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Membresía</th><th>Inicio</th><th>Fin</th><th>Acciones</th>
+        </tr></thead><tbody>`;
 
         items.forEach(item => {
           html += `
@@ -895,7 +902,6 @@
         const response = await fetch(`${API_BASE}/admin/admins`, {
           headers: getAdminHeaders(false)
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -904,23 +910,14 @@
         }
 
         const items = data.items || [];
-
         if (!items.length) {
           setTable("Admins", `<div class="summary-box">No hay administradores.</div>`);
           return;
         }
 
-        let html = `<table>
-          <thead>
-            <tr>
-              <th>User ID</th>
-              <th>Nombre</th>
-              <th>Correo</th>
-              <th>Rol</th>
-              <th>Creado</th>
-            </tr>
-          </thead>
-          <tbody>`;
+        let html = `<table><thead><tr>
+          <th>User ID</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Creado</th>
+        </tr></thead><tbody>`;
 
         items.forEach(item => {
           html += `
@@ -946,7 +943,6 @@
         const response = await fetch(`${API_BASE}/admin/video-picks`, {
           headers: getAdminHeaders(false)
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -955,25 +951,14 @@
         }
 
         const items = data.items || [];
-
         if (!items.length) {
           setTable("VideoPicks", `<div class="summary-box">No hay VideoPicks cargados.</div>`);
           return;
         }
 
-        let html = `<table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Título</th>
-              <th>Descripción</th>
-              <th>Video</th>
-              <th>Estado</th>
-              <th>Creado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>`;
+        let html = `<table><thead><tr>
+          <th>ID</th><th>Título</th><th>Descripción</th><th>Video</th><th>Estado</th><th>Creado</th><th>Acciones</th>
+        </tr></thead><tbody>`;
 
         items.forEach(item => {
           html += `
@@ -981,9 +966,7 @@
               <td>${escapeHtml(item.video_id || item.id || "")}</td>
               <td>${escapeHtml(item.title || "")}</td>
               <td>${escapeHtml(item.description || "")}</td>
-              <td>
-                ${item.video_url ? `<a href="${API_BASE}${item.video_url}" target="_blank" style="color:orange;">Ver video</a>` : ""}
-              </td>
+              <td>${item.video_url ? `<a href="${API_BASE}${item.video_url}" target="_blank" style="color:orange;">Ver video</a>` : ""}</td>
               <td>${statusPill(item.status || (item.is_active ? 'active' : 'inactive'))}</td>
               <td>${escapeHtml(item.created_at || "")}</td>
               <td>
@@ -1003,6 +986,47 @@
       }
     }
 
+    async function loadFreePicksVideo() {
+      try {
+        const response = await fetch(`${API_BASE}/admin/free-picks-video`, {
+          headers: getAdminHeaders(false)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          setTable("Video lateral picks", `<div class="summary-box">${escapeHtml(data.detail || "No se pudo cargar el video lateral.")}</div>`);
+          return;
+        }
+
+        const items = data.items || [];
+        if (!items.length) {
+          setTable("Video lateral picks", `<div class="summary-box">No hay video lateral cargado.</div>`);
+          return;
+        }
+
+        let html = `<table><thead><tr>
+          <th>ID</th><th>Título</th><th>Video</th><th>Estado</th><th>Creado</th>
+        </tr></thead><tbody>`;
+
+        items.forEach(item => {
+          html += `
+            <tr>
+              <td>${escapeHtml(item.video_id || item.id || "")}</td>
+              <td>${escapeHtml(item.title || "")}</td>
+              <td>${item.video_url ? `<a href="${API_BASE}${item.video_url}" target="_blank" style="color:orange;">Ver video</a>` : ""}</td>
+              <td>${statusPill(item.status || (item.is_active ? 'active' : 'inactive'))}</td>
+              <td>${escapeHtml(item.created_at || "")}</td>
+            </tr>
+          `;
+        });
+
+        html += `</tbody></table>`;
+        setTable("Video lateral picks", html);
+      } catch (error) {
+        setTable("Video lateral picks", `<div class="summary-box">Error de conexión: ${escapeHtml(error)}</div>`);
+      }
+    }
+
     function setTargetUserId(userId) {
       document.getElementById("targetUserId").value = userId;
       showMessage("actionMessage", `User ID cargado: ${userId}`, "success");
@@ -1015,7 +1039,6 @@
           headers: getAdminHeaders(true),
           body: JSON.stringify({ user_id: userId, days })
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -1037,7 +1060,6 @@
           headers: getAdminHeaders(true),
           body: JSON.stringify({ user_id: userId, days })
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -1059,7 +1081,6 @@
           headers: getAdminHeaders(true),
           body: JSON.stringify({ user_id: userId })
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -1083,7 +1104,6 @@
           headers: getAdminHeaders(true),
           body: JSON.stringify({ request_id: requestId })
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -1107,7 +1127,6 @@
           headers: getAdminHeaders(true),
           body: JSON.stringify({ user_id: userId })
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -1130,7 +1149,6 @@
           method: "POST",
           headers: getAdminHeaders(false)
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -1146,15 +1164,13 @@
     }
 
     async function deleteVideoPick(videoId) {
-      if (!videoId) return;
-      if (!confirm(`¿Eliminar VideoPick ${videoId}?`)) return;
+      if (!videoId || !confirm(`¿Eliminar VideoPick ${videoId}?`)) return;
 
       try {
         const response = await fetch(`${API_BASE}/admin/video-picks/${encodeURIComponent(videoId)}`, {
           method: "DELETE",
           headers: getAdminHeaders(false)
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -1171,49 +1187,36 @@
 
     function approveDays(days) {
       const userId = document.getElementById("targetUserId").value.trim();
-      if (!userId) {
-        showMessage("actionMessage", "Escribe o carga un user_id.", "error");
-        return;
-      }
+      if (!userId) return showMessage("actionMessage", "Escribe o carga un user_id.", "error");
       approveMembership(userId, days);
     }
 
     function extendDays(days) {
       const userId = document.getElementById("targetUserId").value.trim();
-      if (!userId) {
-        showMessage("actionMessage", "Escribe o carga un user_id.", "error");
-        return;
-      }
+      if (!userId) return showMessage("actionMessage", "Escribe o carga un user_id.", "error");
       extendMembership(userId, days);
     }
 
     function expireMembershipManual() {
       const userId = document.getElementById("targetUserId").value.trim();
-      if (!userId) {
-        showMessage("actionMessage", "Escribe o carga un user_id.", "error");
-        return;
-      }
+      if (!userId) return showMessage("actionMessage", "Escribe o carga un user_id.", "error");
       expireMembershipFor(userId);
     }
 
     function deleteUserManual() {
       const userId = document.getElementById("targetUserId").value.trim();
-      if (!userId) {
-        showMessage("actionMessage", "Escribe o carga un user_id.", "error");
-        return;
-      }
+      if (!userId) return showMessage("actionMessage", "Escribe o carga un user_id.", "error");
       deleteUser(userId);
     }
 
     function restoreAdminSession() {
       const session = getSavedSession();
       setSessionUI(session);
-      if (session) {
-        loadPendingRequests();
-      }
+      if (session) loadPendingRequests();
     }
 
-    document.getElementById("videopickFile").addEventListener("change", previewVideoPickFile);
+    document.getElementById("videopickFile").addEventListener("change", () => previewVideoFile("videopickFile", "videopickPreview"));
+    document.getElementById("freePicksVideoFile").addEventListener("change", () => previewVideoFile("freePicksVideoFile", "freePicksVideoPreview"));
 
     restoreAdminSession();
   </script>

@@ -283,6 +283,13 @@
       box-shadow: 0 0 14px rgba(255,140,0,0.05);
     }
 
+    .free-picks-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 22px;
+      align-items: start;
+    }
+
     .picks-grid {
       display: grid;
       gap: 16px;
@@ -306,6 +313,26 @@
       color: #e2e2e2;
       line-height: 1.55;
       font-size: 16px;
+    }
+
+    .promo-video-box {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 14px;
+      min-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .promo-video-box video {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: #000;
+      display: block;
+      box-shadow: 0 0 14px rgba(255,140,0,0.08);
     }
 
     .video-split {
@@ -445,7 +472,8 @@
       .hero-grid,
       .two-col,
       .bot-grid,
-      .video-split {
+      .video-split,
+      .free-picks-layout {
         grid-template-columns: 1fr;
       }
 
@@ -546,9 +574,7 @@
           </h1>
 
           <p id="heroDescription">
-            ProHeat Sports integra picks públicos, contenido premium y panel administrativo
-            desde una sola infraestructura. Todo alimentado directamente desde el backend
-            central de ProHeat.
+            ProHeat Sports integra picks públicos, contenido premium y panel administrativo desde una sola infraestructura. Todo alimentado directamente desde el backend central de ProHeat.
           </p>
 
           <div class="hero-actions">
@@ -576,9 +602,15 @@
       </div>
 
       <div class="card">
-        <div id="predictionList" class="picks-grid">
-          <div class="pick-card">
-            <div class="pick-line" id="loadingPicksText">Cargando picks...</div>
+        <div class="free-picks-layout">
+          <div id="predictionList" class="picks-grid">
+            <div class="pick-card">
+              <div class="pick-line" id="loadingPicksText">Cargando picks...</div>
+            </div>
+          </div>
+
+          <div class="promo-video-box" id="freePicksPromoContainer">
+            <div class="muted" id="loadingFreePicksVideoText">Cargando video...</div>
           </div>
         </div>
       </div>
@@ -684,6 +716,7 @@
     let currentLanguage = localStorage.getItem("proheat_lang") || "es";
     let publicPicksCache = [];
     let videoPickCache = null;
+    let freePicksVideoCache = null;
 
     const i18n = {
       es: {
@@ -712,8 +745,11 @@
         freePicksTitle: "🔥 Picks Gratuitas",
         freePicksNote: "Consulta las selecciones públicas del día cargadas desde el backend central de ProHeat.",
         loadingPicksText: "Cargando picks...",
+        loadingFreePicksVideoText: "Cargando video...",
         noPicks: "No hay picks disponibles por el momento.",
         picksError: "Error cargando picks.",
+        noFreePicksVideo: "No hay video disponible.",
+        freePicksVideoError: "Error cargando video.",
 
         videoSectionTitle: "🎥 VideoPick del Día",
         videoSectionNote: "Mira el videopick destacado del día con reproducción automática en silencio.",
@@ -771,8 +807,11 @@
         freePicksTitle: "🔥 Free Picks",
         freePicksNote: "Check today’s public selections loaded from the central ProHeat backend.",
         loadingPicksText: "Loading picks...",
+        loadingFreePicksVideoText: "Loading video...",
         noPicks: "No picks are available at the moment.",
         picksError: "Error loading picks.",
+        noFreePicksVideo: "No video available.",
+        freePicksVideoError: "Error loading video.",
 
         videoSectionTitle: "🎥 VideoPick of the Day",
         videoSectionNote: "Watch today’s featured videopick with muted autoplay.",
@@ -832,6 +871,7 @@
       renderPicks(publicPicksCache);
       renderMatchCenter(publicPicksCache);
       renderVideoPick(videoPickCache);
+      renderFreePicksVideo(freePicksVideoCache);
     }
 
     function applyLanguage() {
@@ -859,6 +899,12 @@
 
       document.getElementById("freePicksTitle").textContent = t("freePicksTitle");
       document.getElementById("freePicksNote").textContent = t("freePicksNote");
+
+      const loadingPicksEl = document.getElementById("loadingPicksText");
+      if (loadingPicksEl) loadingPicksEl.textContent = t("loadingPicksText");
+
+      const loadingFreePicksVideoEl = document.getElementById("loadingFreePicksVideoText");
+      if (loadingFreePicksVideoEl) loadingFreePicksVideoEl.textContent = t("loadingFreePicksVideoText");
 
       document.getElementById("videoSectionTitle").textContent = t("videoSectionTitle");
       document.getElementById("videoSectionNote").textContent = t("videoSectionNote");
@@ -901,6 +947,26 @@
     function localizeField(item, esKey, enKey) {
       if (currentLanguage === "en" && item && item[enKey]) return item[enKey];
       return item?.[esKey] ?? "";
+    }
+
+    function ensureAutoplay(videoElement) {
+      if (!videoElement) return;
+      videoElement.muted = true;
+      videoElement.defaultMuted = true;
+      videoElement.autoplay = true;
+      videoElement.loop = true;
+      videoElement.playsInline = true;
+
+      const playAttempt = () => {
+        const promise = videoElement.play();
+        if (promise && typeof promise.catch === "function") {
+          promise.catch(() => {});
+        }
+      };
+
+      playAttempt();
+      videoElement.addEventListener("loadedmetadata", playAttempt, { once: true });
+      videoElement.addEventListener("canplay", playAttempt, { once: true });
     }
 
     function renderMatchCenter(items) {
@@ -957,6 +1023,30 @@
       }).join("");
     }
 
+    function renderFreePicksVideo(item) {
+      const container = document.getElementById("freePicksPromoContainer");
+
+      if (!item) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("noFreePicksVideo"))}</div>`;
+        return;
+      }
+
+      const videoUrl = item.video_url ? `${API}${item.video_url}` : "";
+
+      if (!videoUrl) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("noFreePicksVideo"))}</div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <video id="freePicksPromoPlayer" autoplay muted loop playsinline preload="auto" controls>
+          <source src="${escapeHtml(videoUrl)}" type="video/mp4">
+        </video>
+      `;
+
+      ensureAutoplay(document.getElementById("freePicksPromoPlayer"));
+    }
+
     function renderVideoPick(item) {
       const container = document.getElementById("videoPickContainer");
 
@@ -988,12 +1078,7 @@
         </div>
       `;
 
-      const videoEl = document.getElementById("videoPickPlayer");
-      if (videoEl) {
-        videoEl.muted = true;
-        videoEl.defaultMuted = true;
-        videoEl.play().catch(() => {});
-      }
+      ensureAutoplay(document.getElementById("videoPickPlayer"));
     }
 
     async function loadPublicPicks() {
@@ -1020,6 +1105,20 @@
       }
     }
 
+    async function loadFreePicksPromoVideo() {
+      const container = document.getElementById("freePicksPromoContainer");
+      container.innerHTML = `<div class="muted">${escapeHtml(t("loadingFreePicksVideoText"))}</div>`;
+
+      try {
+        const res = await fetch(`${API}/api/data/free-picks-video`);
+        const data = await res.json();
+        freePicksVideoCache = Array.isArray(data.items) && data.items.length ? data.items[0] : null;
+        renderFreePicksVideo(freePicksVideoCache);
+      } catch (error) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("freePicksVideoError"))}</div>`;
+      }
+    }
+
     async function loadVideoPick() {
       const container = document.getElementById("videoPickContainer");
       container.innerHTML = `<div class="muted">${escapeHtml(t("loadingVideoText"))}</div>`;
@@ -1036,6 +1135,7 @@
 
     applyLanguage();
     loadPublicPicks();
+    loadFreePicksPromoVideo();
     loadVideoPick();
   </script>
 </body>

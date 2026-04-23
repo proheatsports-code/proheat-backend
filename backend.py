@@ -220,6 +220,20 @@ def init_db() -> None:
     )
     """)
 
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS free_picks_videos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        video_id TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        video_filename TEXT NOT NULL,
+        video_url TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -1392,6 +1406,95 @@ def admin_delete_video_pick(video_id: str, admin=Depends(require_admin)):
     return {"status": "ok", "message": "VideoPick eliminado correctamente.", "video_id": video_id}
 
 # =========================
+# ADMIN FREE PICKS SIDE VIDEO
+# =========================
+
+@app.post("/admin/upload-free-picks-video")
+async def admin_upload_free_picks_video(
+    title: str = Form(...),
+    video: UploadFile = File(...),
+    admin=Depends(require_admin)
+):
+    filename = video.filename or ""
+    suffix = Path(filename).suffix.lower()
+
+    if suffix not in {".mp4", ".mov", ".webm", ".m4v"}:
+        raise HTTPException(status_code=400, detail="Solo videos .mp4, .mov, .webm o .m4v.")
+
+    safe_name = Path(filename).name
+    stored_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}_{safe_name}"
+    save_path = VIDEO_UPLOADS_DIR / stored_name
+
+    try:
+        content = await video.read()
+        with open(save_path, "wb") as f:
+            f.write(content)
+
+        video_id = f"fpv_{secrets.token_hex(6)}"
+        video_url = f"/videos/{stored_name}"
+        now_str = iso_now()
+
+        conn = db_connect()
+        cur = conn.cursor()
+        cur.execute("UPDATE free_picks_videos SET is_active = 0, updated_at = ? WHERE is_active = 1", (now_str,))
+        cur.execute("""
+        INSERT INTO free_picks_videos (
+            video_id, title, video_filename, video_url,
+            is_active, created_by, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            video_id,
+            title.strip(),
+            safe_name,
+            video_url,
+            1,
+            admin["user_id"],
+            now_str,
+            now_str
+        ))
+        conn.commit()
+        conn.close()
+
+        write_admin_log(
+            admin_user_id=admin["user_id"],
+            action="upload_free_picks_video",
+            details=f"video_id={video_id} file={stored_name}"
+        )
+
+        return {
+            "status": "ok",
+            "message": "Video lateral de Picks Gratuitas subido correctamente.",
+            "item": {
+                "video_id": video_id,
+                "title": title.strip(),
+                "video_url": video_url,
+                "video_filename": safe_name,
+                "is_active": True,
+                "created_at": now_str
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error subiendo video lateral: {e}")
+
+@app.get("/admin/free-picks-video")
+def admin_list_free_picks_video(admin=Depends(require_admin)):
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+    SELECT video_id, title, video_filename, video_url, is_active, created_by, created_at, updated_at
+    FROM free_picks_videos
+    ORDER BY datetime(created_at) DESC
+    """)
+    items = []
+    for row in cur.fetchall():
+        item = dict(row)
+        item["is_active"] = bool(item["is_active"])
+        items.append(item)
+    conn.close()
+    return {"items": items}
+
+# =========================
 # ADMIN EXCEL UPLOAD
 # =========================
 
@@ -1512,6 +1615,25 @@ def api_data_videopicks():
     cur.execute("""
     SELECT video_id, title, description, video_filename, video_url, created_at
     FROM video_picks
+    WHERE is_active = 1
+    ORDER BY datetime(created_at) DESC
+    LIMIT 1
+    """)
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return {"items": []}
+
+    return {"items": [dict(row)]}
+
+@app.get("/api/data/free-picks-video")
+def api_data_free_picks_video():
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+    SELECT video_id, title, video_filename, video_url, created_at
+    FROM free_picks_videos
     WHERE is_active = 1
     ORDER BY datetime(created_at) DESC
     LIMIT 1
