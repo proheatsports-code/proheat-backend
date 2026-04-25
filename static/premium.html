@@ -40,9 +40,6 @@ body{
   width:100%;
   font-weight:bold;
   margin-top:10px;
-  text-align:center;
-  display:inline-block;
-  text-decoration:none;
 }
 
 .btn.secondary{
@@ -128,28 +125,64 @@ input[type="file"]{
   gap:10px;
 }
 
-.divider{
-  height:1px;
-  background:rgba(255,120,0,0.28);
-  margin:18px 0;
+.premium-content-grid{
+  display:grid;
+  gap:16px;
 }
 
-.top-actions{
-  display:flex;
+.premium-section{
+  background:#0b0b0b;
+  border:1px solid rgba(255,120,0,0.25);
+  border-radius:14px;
+  padding:16px;
+}
+
+.premium-section h3{
+  color:orange;
+  margin-top:0;
+}
+
+.premium-items{
+  display:grid;
   gap:10px;
-  flex-wrap:wrap;
-  margin-bottom:16px;
 }
 
-.top-actions .btn{
-  width:auto;
-  min-width:160px;
+.premium-item{
+  background:#050505;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  padding:12px;
+  line-height:1.45;
+}
+
+.premium-item-title{
+  color:orange;
+  font-weight:bold;
+  font-size:18px;
+  margin-bottom:8px;
+}
+
+.premium-field{
+  color:#e8e8e8;
+  font-size:14px;
+  margin:3px 0;
+}
+
+.premium-field strong{
+  color:#ffb22e;
+}
+
+.premium-empty{
+  color:#bbb;
+  font-size:14px;
+  padding:10px;
+  border-radius:10px;
+  background:#111;
 }
 
 @media(max-width:700px){
   .free-links{ grid-template-columns:1fr; }
   .action-row{ display:block; }
-  .top-actions .btn{ width:100%; }
 }
 </style>
 </head>
@@ -160,14 +193,9 @@ input[type="file"]{
 
 <h1>🔥 ProHeat Premium</h1>
 
-<div class="top-actions">
-  <a class="btn secondary" href="/">Volver a versión gratuita</a>
-</div>
-
 <!-- LOGIN -->
 <div class="card" id="loginBox">
 <h2>Iniciar sesión</h2>
-<p>Entra con tu correo y contraseña. Si ya tienes Premium activo, irás a tu cuenta Premium. Si todavía no has pagado, quedarás en sesión gratuita con opción de actualizar.</p>
 
 <input type="email" id="email" placeholder="Correo">
 <input type="password" id="password" placeholder="Contraseña">
@@ -176,16 +204,13 @@ input[type="file"]{
 
 <div id="loginMessage"></div>
 
-<div class="divider"></div>
-
-<h3>¿No tienes cuenta?</h3>
-<p>Crea tu cuenta gratis. Después inicia sesión para pagar Premium o subir tu comprobante.</p>
+<h3>Crear cuenta</h3>
 
 <input type="text" id="nameReg" placeholder="Nombre">
 <input type="email" id="emailReg" placeholder="Correo">
 <input type="password" id="passReg" placeholder="Contraseña">
 
-<button class="btn secondary" onclick="register()">Crear cuenta</button>
+<button class="btn" onclick="register()">Registrarse</button>
 </div>
 
 <!-- USUARIO -->
@@ -194,19 +219,30 @@ input[type="file"]{
 <p id="membershipStatus"></p>
 
 <div id="freeSessionBox" class="message warning hidden">
-  Tu sesión está activa, pero aún no tienes membresía Premium. Puedes seguir usando la versión gratuita o actualizar a Premium.
+  Tu sesión está activa, pero aún no tienes membresía premium. Puedes seguir usando la versión gratuita o activar Premium.
 </div>
 
 <div id="premiumActiveBox" class="message success hidden">
-  Tu membresía Premium está activa. Ya puedes acceder al contenido Premium de ProHeat Sports.
+  Tu membresía Premium está activa. Ya puedes acceder al contenido premium de ProHeat Sports.
 </div>
 
 <div class="free-links" style="margin-top:12px;">
   <a class="btn secondary" href="/">Ver versión gratuita</a>
-  <button class="btn" onclick="showPaymentSection()" id="upgradeBtn">Actualizar a Premium</button>
+  <a class="btn secondary" href="#paymentBox">Activar Premium</a>
 </div>
 
 <button class="btn secondary" onclick="logout()">Cerrar sesión</button>
+</div>
+
+
+<!-- CONTENIDO PREMIUM -->
+<div class="card hidden" id="premiumContentBox">
+<h2>🔥 Picks Premium</h2>
+<p>Contenido premium activo para tu cuenta. Las tablas se cargan automáticamente desde la base de datos de ProHeat Sports.</p>
+<div id="premiumContentMessage" class="message info hidden"></div>
+<div class="premium-content-grid" id="premiumContentGrid">
+  <div class="premium-empty">Cargando contenido premium...</div>
+</div>
 </div>
 
 <!-- PAGO -->
@@ -250,7 +286,6 @@ const CLABE = "072840012825279849";
 let clabeVisible = false;
 let paypalRendered = false;
 let currentUserId = localStorage.getItem("user_id") || "";
-let currentMembership = "pending";
 
 function setMsg(id, msg, type){
   const el = document.getElementById(id);
@@ -265,16 +300,15 @@ function clearMsg(id){
 }
 
 function saveSession(data){
-  localStorage.setItem("token", data.token || "");
-  localStorage.setItem("user_id", data.user_id || "");
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("user_id", data.user_id);
   localStorage.setItem("user_name", data.name || "");
   localStorage.setItem("user_email", data.email || "");
-  currentUserId = data.user_id || "";
+  currentUserId = data.user_id;
 }
 
-function getToken(){ return localStorage.getItem("token") || ""; }
-function getUserId(){ return localStorage.getItem("user_id") || currentUserId || ""; }
-function getUserName(){ return localStorage.getItem("user_name") || "Usuario"; }
+function getToken(){ return localStorage.getItem("token"); }
+function getUserId(){ return localStorage.getItem("user_id") || currentUserId; }
 
 function logout(){
   localStorage.removeItem("token");
@@ -284,34 +318,11 @@ function logout(){
   location.reload();
 }
 
-function showLoginLayout(){
-  document.getElementById("loginBox").classList.remove("hidden");
-  document.getElementById("userBox").classList.add("hidden");
-  document.getElementById("paymentBox").classList.add("hidden");
-  document.getElementById("transferBox").classList.add("hidden");
-}
-
 function showLoggedLayout(){
   document.getElementById("loginBox").classList.add("hidden");
   document.getElementById("userBox").classList.remove("hidden");
-}
-
-function hidePaymentSection(){
-  document.getElementById("paymentBox").classList.add("hidden");
-  document.getElementById("transferBox").classList.add("hidden");
-}
-
-function showPaymentSection(){
   document.getElementById("paymentBox").classList.remove("hidden");
   document.getElementById("transferBox").classList.remove("hidden");
-  initPayPal();
-  setTimeout(() => {
-    document.getElementById("paymentBox").scrollIntoView({behavior:"smooth", block:"start"});
-  }, 100);
-}
-
-function updateUserHeader(name){
-  document.getElementById("userInfo").innerText = "Usuario: " + (name || getUserName() || "Usuario");
 }
 
 async function register(){
@@ -324,27 +335,18 @@ async function register(){
     return;
   }
 
-  try{
-    const res = await fetch(API+"/register",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({name,email,password})
-    });
+  const res = await fetch(API+"/register",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({name,email,password})
+  });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    if(res.ok){
-      document.getElementById("email").value = email;
-      document.getElementById("password").value = "";
-      setMsg("loginMessage","Cuenta creada ✔ ahora inicia sesión con tu correo y contraseña.","success");
-      document.getElementById("nameReg").value = "";
-      document.getElementById("emailReg").value = "";
-      document.getElementById("passReg").value = "";
-    }else{
-      setMsg("loginMessage",data.detail || "Error al crear cuenta","error");
-    }
-  }catch(e){
-    setMsg("loginMessage","Error de conexión al crear cuenta.","error");
+  if(res.ok){
+    setMsg("loginMessage","Cuenta creada ✔ ahora inicia sesión","success");
+  }else{
+    setMsg("loginMessage",data.detail || "Error al crear cuenta","error");
   }
 }
 
@@ -357,73 +359,49 @@ async function login(){
     return;
   }
 
-  try{
-    const res = await fetch(API+"/login",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({email,password})
-    });
+  const res = await fetch(API+"/login",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({email,password})
+  });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    if(!res.ok){
-      setMsg("loginMessage",data.detail || "Error al iniciar sesión","error");
-      return;
-    }
-
-    saveSession(data);
-    showLoggedLayout();
-    updateUserHeader(data.name);
-
-    const membership = await loadMembership(data.user_id);
-
-    if(membership === "active"){
-      hidePaymentSection();
-    }else{
-      hidePaymentSection();
-    }
-  }catch(e){
-    setMsg("loginMessage","Error de conexión al iniciar sesión.","error");
+  if(!res.ok){
+    setMsg("loginMessage",data.detail || "Error al iniciar sesión","error");
+    return;
   }
+
+  saveSession(data);
+  showLoggedLayout();
+
+  document.getElementById("userInfo").innerText = "Usuario: " + (data.name || "Usuario");
+
+  await loadMembership(data.user_id);
+  initPayPal();
 }
 
 async function loadMembership(user_id){
   if(!user_id){
     document.getElementById("membershipStatus").innerText = "Estado: sesión no identificada";
-    document.getElementById("freeSessionBox").classList.remove("hidden");
-    document.getElementById("premiumActiveBox").classList.add("hidden");
-    hidePaymentSection();
-    return "pending";
+    return;
   }
 
-  try{
-    const res = await fetch(API+"/membership/"+user_id);
-    const data = await res.json();
+  const res = await fetch(API+"/membership/"+user_id);
+  const data = await res.json();
 
-    const status = data.membership || "pending";
-    currentMembership = status;
-    const pillClass = status === "active" ? "status-active" : status === "expired" ? "status-expired" : "status-pending";
+  const status = data.membership || "pending";
+  const pillClass = status === "active" ? "status-active" : status === "expired" ? "status-expired" : "status-pending";
 
-    document.getElementById("membershipStatus").innerHTML =
-      "Estado de membresía: <span class='status-pill "+pillClass+"'>" + status + "</span>";
+  document.getElementById("membershipStatus").innerHTML =
+    "Estado de membresía: <span class='status-pill "+pillClass+"'>" + status + "</span>";
 
-    if(status === "active"){
-      document.getElementById("premiumActiveBox").classList.remove("hidden");
-      document.getElementById("freeSessionBox").classList.add("hidden");
-      document.getElementById("upgradeBtn").innerText = "Ver opciones de pago";
-    }else{
-      document.getElementById("freeSessionBox").classList.remove("hidden");
-      document.getElementById("premiumActiveBox").classList.add("hidden");
-      document.getElementById("upgradeBtn").innerText = "Actualizar a Premium";
-    }
-
-    return status;
-  }catch(e){
-    document.getElementById("membershipStatus").innerText = "Estado: no se pudo consultar membresía";
+  if(status === "active"){
+    document.getElementById("premiumActiveBox").classList.remove("hidden");
+    document.getElementById("freeSessionBox").classList.add("hidden");
+  }else{
     document.getElementById("freeSessionBox").classList.remove("hidden");
     document.getElementById("premiumActiveBox").classList.add("hidden");
-    hidePaymentSection();
-    return "pending";
   }
 }
 
@@ -431,23 +409,12 @@ function initPayPal(){
   if(paypalRendered) return;
   paypalRendered = true;
 
-  if(!window.paypal){
-    setMsg("paypalMessage","PayPal no cargó correctamente. Recarga la página.","error");
-    return;
-  }
-
   paypal.Buttons({
 
     createOrder: async function(){
-      const token = getToken();
-      if(!token){
-        setMsg("paypalMessage","Inicia sesión antes de pagar.","error");
-        throw new Error("No token");
-      }
-
       const res = await fetch(API+"/paypal/create-order",{
         method:"POST",
-        headers:{ "Authorization":"Bearer "+token }
+        headers:{ "Authorization":"Bearer "+getToken() }
       });
 
       const data = await res.json();
@@ -546,15 +513,13 @@ async function uploadProof(){
 (async function(){
   const token = getToken();
   const userId = getUserId();
-  const userName = getUserName();
+  const userName = localStorage.getItem("user_name") || "Usuario";
 
-  if(token && userId){
+  if(token){
     showLoggedLayout();
-    updateUserHeader(userName);
+    document.getElementById("userInfo").innerText = "Usuario: " + userName;
     await loadMembership(userId);
-    hidePaymentSection();
-  }else{
-    logout();
+    initPayPal();
   }
 })();
 </script>
