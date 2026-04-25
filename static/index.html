@@ -86,7 +86,8 @@
     }
 
     .lang-btn,
-    .menu-btn {
+    .menu-btn,
+    .login-btn {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,120,0,0.18);
       color: white;
@@ -99,7 +100,8 @@
     }
 
     .lang-btn:hover,
-    .menu-btn:hover {
+    .menu-btn:hover,
+    .login-btn:hover {
       border-color: orange;
       color: orange;
     }
@@ -710,6 +712,17 @@
       </div>
 
       <div class="right-zone">
+        <div class="auth-dropdown">
+          <button id="loginButton" class="login-btn" type="button" onclick="toggleAuthPanel()">Iniciar sesión</button>
+          <div class="auth-panel" id="authPanel">
+            <h3>Iniciar sesión</h3>
+            <input type="email" id="authEmail" placeholder="Correo" autocomplete="email">
+            <input type="password" id="authPassword" placeholder="Contraseña" autocomplete="current-password">
+            <button class="btn-main" type="button" style="width:100%; padding:12px 16px;" onclick="loginFromHome()">Entrar</button>
+            <a class="auth-small-link" href="/premium">¿No tienes cuenta? Crear cuenta</a>
+            <div id="authMessage" class="auth-message"></div>
+          </div>
+        </div>
         <button id="btnEs" class="lang-btn active" type="button" onclick="setLanguage('es')">ES</button>
         <button id="btnEn" class="lang-btn" type="button" onclick="setLanguage('en')">EN</button>
       </div>
