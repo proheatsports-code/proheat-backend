@@ -442,7 +442,8 @@ async function register(){
 
     if(loginRes.ok){
       saveSession(loginData);
-      window.location.href = "/";
+      const checkoutMode = new URLSearchParams(window.location.search).get("checkout") === "1";
+      window.location.href = checkoutMode ? "/premium?checkout=1" : "/";
       return;
     }
 
@@ -706,9 +707,26 @@ async function uploadProof(){
 
 (async function(){
   const token = getToken();
+  const userId = getUserId();
+  const checkoutMode = new URLSearchParams(window.location.search).get("checkout") === "1";
+  const userName = localStorage.getItem("user_name") || "Usuario";
 
-  // Esta página queda como pantalla de creación de cuenta.
-  // Si ya hay sesión activa, regresamos al Home para que ahí cargue versión gratuita o Premium.
+  // Si viene desde el botón "Actualizar a Premium" y ya hay sesión,
+  // mostramos directamente las opciones de pago.
+  if(token && checkoutMode){
+    showLoggedLayout();
+    document.getElementById("userInfo").innerText = "Usuario: " + userName;
+    await loadMembership(userId);
+
+    document.getElementById("premiumContentBox").classList.add("hidden");
+    document.getElementById("freeSessionBox").classList.remove("hidden");
+    document.getElementById("premiumActiveBox").classList.add("hidden");
+
+    showPaymentSection();
+    return;
+  }
+
+  // Si ya hay sesión y no viene a pagar, regresamos al Home.
   if(token){
     window.location.href = "/";
   }
