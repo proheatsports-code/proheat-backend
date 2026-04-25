@@ -250,25 +250,22 @@ input[type="file"]{
 <div class="container">
 
 <h1>🔥 ProHeat Premium</h1>
+<a class="btn secondary small" href="/">← Regresar a Home</a>
 
-<!-- LOGIN -->
+<!-- CREAR CUENTA -->
 <div class="card" id="loginBox">
-<h2>Iniciar sesión</h2>
-
-<input type="email" id="email" placeholder="Correo">
-<input type="password" id="password" placeholder="Contraseña">
-
-<button class="btn" onclick="login()">Entrar</button>
-
-<div id="loginMessage"></div>
-
-<h3>Crear cuenta</h3>
+<h2>Crear cuenta</h2>
+<p>Regístrate para iniciar sesión desde el Home y activar o consultar tu acceso Premium.</p>
 
 <input type="text" id="nameReg" placeholder="Nombre">
 <input type="email" id="emailReg" placeholder="Correo">
 <input type="password" id="passReg" placeholder="Contraseña">
 
-<button class="btn" onclick="register()">Registrarse</button>
+<button class="btn" onclick="register()">Crear cuenta</button>
+
+<div id="loginMessage"></div>
+
+<a class="btn secondary" href="/">Regresar a Home</a>
 </div>
 
 <!-- USUARIO -->
@@ -417,18 +414,41 @@ async function register(){
     return;
   }
 
-  const res = await fetch(API+"/register",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({name,email,password})
-  });
+  try{
+    setMsg("loginMessage","Creando cuenta...","warning");
 
-  const data = await res.json();
+    const res = await fetch(API+"/register",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({name,email,password})
+    });
 
-  if(res.ok){
-    setMsg("loginMessage","Cuenta creada ✔ ahora inicia sesión","success");
-  }else{
-    setMsg("loginMessage",data.detail || "Error al crear cuenta","error");
+    const data = await res.json();
+
+    if(!res.ok){
+      setMsg("loginMessage",data.detail || "Error al crear cuenta","error");
+      return;
+    }
+
+    setMsg("loginMessage","Cuenta creada ✔ iniciando sesión...","success");
+
+    const loginRes = await fetch(API+"/login",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({email,password})
+    });
+
+    const loginData = await loginRes.json();
+
+    if(loginRes.ok){
+      saveSession(loginData);
+      window.location.href = "/";
+      return;
+    }
+
+    window.location.href = "/";
+  }catch(e){
+    setMsg("loginMessage","Error de conexión al crear cuenta.","error");
   }
 }
 
@@ -686,13 +706,11 @@ async function uploadProof(){
 
 (async function(){
   const token = getToken();
-  const userId = getUserId();
-  const userName = localStorage.getItem("user_name") || "Usuario";
 
+  // Esta página queda como pantalla de creación de cuenta.
+  // Si ya hay sesión activa, regresamos al Home para que ahí cargue versión gratuita o Premium.
   if(token){
-    showLoggedLayout();
-    document.getElementById("userInfo").innerText = "Usuario: " + userName;
-    await loadMembership(userId);
+    window.location.href = "/";
   }
 })();
 </script>
