@@ -39,6 +39,19 @@ body{
   cursor:pointer;
   width:100%;
   font-weight:bold;
+  margin-top:10px;
+}
+
+.btn.secondary{
+  background:#222;
+  color:white;
+  border:1px solid rgba(255,120,0,0.45);
+}
+
+.btn.small{
+  width:auto;
+  padding:10px 14px;
+  margin-right:8px;
 }
 
 input{
@@ -49,15 +62,73 @@ input{
   border:none;
 }
 
+input[type="file"]{
+  background:#222;
+  color:white;
+}
+
 .message{
   margin-top:10px;
   padding:10px;
   border-radius:8px;
+  line-height:1.4;
 }
 
 .success{ background:#1f7a3a; }
 .error{ background:#8b2c2c; }
 .warning{ background:#8a6a1d; }
+.info{ background:#1b3558; }
+
+.hidden{ display:none !important; }
+
+.status-pill{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:bold;
+  font-size:13px;
+  margin-left:6px;
+}
+
+.status-active{ background:#0f6b35; color:#9dffc0; }
+.status-pending{ background:#6b5510; color:#ffd77a; }
+.status-expired{ background:#6b1919; color:#ffaaaa; }
+
+.clabe-box{
+  background:#000;
+  border:1px solid rgba(255,120,0,0.35);
+  padding:14px;
+  border-radius:12px;
+  margin-top:12px;
+  font-size:20px;
+  letter-spacing:1px;
+  font-weight:bold;
+  color:orange;
+  word-break:break-word;
+}
+
+.action-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.action-row .btn{
+  flex:1;
+  min-width:180px;
+}
+
+.free-links{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+@media(max-width:700px){
+  .free-links{ grid-template-columns:1fr; }
+  .action-row{ display:block; }
+}
 </style>
 </head>
 
@@ -85,27 +156,70 @@ input{
 <input type="password" id="passReg" placeholder="Contraseña">
 
 <button class="btn" onclick="register()">Registrarse</button>
-
 </div>
 
 <!-- USUARIO -->
 <div class="card hidden" id="userBox">
-<h2 id="userInfo"></h2>
-
+<h2 id="userInfo">Sesión iniciada</h2>
 <p id="membershipStatus"></p>
 
-<h3>Premium 30 días - $110 MXN</h3>
+<div id="freeSessionBox" class="message warning hidden">
+  Tu sesión está activa, pero aún no tienes membresía premium. Puedes seguir usando la versión gratuita o activar Premium.
+</div>
 
+<div id="premiumActiveBox" class="message success hidden">
+  Tu membresía Premium está activa. Ya puedes acceder al contenido premium de ProHeat Sports.
+</div>
+
+<div class="free-links" style="margin-top:12px;">
+  <a class="btn secondary" href="/">Ver versión gratuita</a>
+  <a class="btn secondary" href="#paymentBox">Activar Premium</a>
+</div>
+
+<button class="btn secondary" onclick="logout()">Cerrar sesión</button>
+</div>
+
+<!-- PAGO -->
+<div class="card hidden" id="paymentBox">
+<h3>Premium 30 días - $110 MXN</h3>
+<p>Puedes pagar con PayPal/tarjeta o por transferencia directa. Si pagas por transferencia, sube tu comprobante para revisión manual.</p>
+
+<h3>Pago inmediato con PayPal</h3>
 <div id="paypal-button-container"></div>
 <div id="paypalMessage"></div>
+</div>
 
-<button class="btn" onclick="logout()">Cerrar sesión</button>
+<!-- TRANSFERENCIA DIRECTA -->
+<div class="card hidden" id="transferBox">
+<h3>Transferencia directa</h3>
+<p>CLABE para transferencia:</p>
+
+<div class="clabe-box" id="clabeDisplay">••••••••••••••9849</div>
+
+<div class="action-row">
+  <button class="btn secondary" onclick="toggleClabe()" id="toggleClabeBtn">Mostrar CLABE</button>
+  <button class="btn" onclick="copyClabe()">Copiar CLABE</button>
+</div>
+
+<div id="clabeMessage"></div>
+
+<h3>Subir comprobante manual</h3>
+<p>Después de hacer la transferencia, sube tu comprobante. El admin podrá aprobar tu membresía.</p>
+
+<input type="file" id="proofFile" accept="image/*,.pdf">
+<button class="btn" onclick="uploadProof()">Subir comprobante</button>
+
+<div id="proofMessage"></div>
 </div>
 
 </div>
 
 <script>
 const API = window.location.origin;
+const CLABE = "072840012825279849";
+let clabeVisible = false;
+let paypalRendered = false;
+let currentUserId = localStorage.getItem("user_id") || "";
 
 function setMsg(id, msg, type){
   const el = document.getElementById(id);
@@ -113,18 +227,47 @@ function setMsg(id, msg, type){
   el.className = "message " + type;
 }
 
-function saveToken(t){ localStorage.setItem("token", t); }
+function clearMsg(id){
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  el.className = "";
+}
+
+function saveSession(data){
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("user_id", data.user_id);
+  localStorage.setItem("user_name", data.name || "");
+  localStorage.setItem("user_email", data.email || "");
+  currentUserId = data.user_id;
+}
+
 function getToken(){ return localStorage.getItem("token"); }
+function getUserId(){ return localStorage.getItem("user_id") || currentUserId; }
 
 function logout(){
   localStorage.removeItem("token");
+  localStorage.removeItem("user_id");
+  localStorage.removeItem("user_name");
+  localStorage.removeItem("user_email");
   location.reload();
 }
 
+function showLoggedLayout(){
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("userBox").classList.remove("hidden");
+  document.getElementById("paymentBox").classList.remove("hidden");
+  document.getElementById("transferBox").classList.remove("hidden");
+}
+
 async function register(){
-  const name = document.getElementById("nameReg").value;
-  const email = document.getElementById("emailReg").value;
-  const password = document.getElementById("passReg").value;
+  const name = document.getElementById("nameReg").value.trim();
+  const email = document.getElementById("emailReg").value.trim();
+  const password = document.getElementById("passReg").value.trim();
+
+  if(!name || !email || !password){
+    setMsg("loginMessage","Completa nombre, correo y contraseña.","error");
+    return;
+  }
 
   const res = await fetch(API+"/register",{
     method:"POST",
@@ -137,13 +280,18 @@ async function register(){
   if(res.ok){
     setMsg("loginMessage","Cuenta creada ✔ ahora inicia sesión","success");
   }else{
-    setMsg("loginMessage",data.detail,"error");
+    setMsg("loginMessage",data.detail || "Error al crear cuenta","error");
   }
 }
 
 async function login(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  if(!email || !password){
+    setMsg("loginMessage","Ingresa correo y contraseña.","error");
+    return;
+  }
 
   const res = await fetch(API+"/login",{
     method:"POST",
@@ -154,31 +302,47 @@ async function login(){
   const data = await res.json();
 
   if(!res.ok){
-    setMsg("loginMessage",data.detail,"error");
+    setMsg("loginMessage",data.detail || "Error al iniciar sesión","error");
     return;
   }
 
-  saveToken(data.token);
+  saveSession(data);
+  showLoggedLayout();
 
-  document.getElementById("loginBox").classList.add("hidden");
-  document.getElementById("userBox").classList.remove("hidden");
+  document.getElementById("userInfo").innerText = "Usuario: " + (data.name || "Usuario");
 
-  document.getElementById("userInfo").innerText =
-    data.name;
-
-  loadMembership(data.user_id);
+  await loadMembership(data.user_id);
   initPayPal();
 }
 
 async function loadMembership(user_id){
+  if(!user_id){
+    document.getElementById("membershipStatus").innerText = "Estado: sesión no identificada";
+    return;
+  }
+
   const res = await fetch(API+"/membership/"+user_id);
   const data = await res.json();
 
-  document.getElementById("membershipStatus").innerText =
-    "Estado: " + data.membership;
+  const status = data.membership || "pending";
+  const pillClass = status === "active" ? "status-active" : status === "expired" ? "status-expired" : "status-pending";
+
+  document.getElementById("membershipStatus").innerHTML =
+    "Estado de membresía: <span class='status-pill "+pillClass+"'>" + status + "</span>";
+
+  if(status === "active"){
+    document.getElementById("premiumActiveBox").classList.remove("hidden");
+    document.getElementById("freeSessionBox").classList.add("hidden");
+  }else{
+    document.getElementById("freeSessionBox").classList.remove("hidden");
+    document.getElementById("premiumActiveBox").classList.add("hidden");
+  }
 }
 
 function initPayPal(){
+  if(paypalRendered) return;
+  paypalRendered = true;
+
   paypal.Buttons({
 
     createOrder: async function(){
@@ -190,7 +354,7 @@ function initPayPal(){
       const data = await res.json();
 
       if(!res.ok){
-        setMsg("paypalMessage",data.detail,"error");
+        setMsg("paypalMessage",data.detail || "Error al crear orden PayPal","error");
         throw new Error();
       }
 
@@ -206,10 +370,10 @@ function initPayPal(){
       const result = await res.json();
 
       if(res.ok){
-        setMsg("paypalMessage","Pago exitoso ✔","success");
+        setMsg("paypalMessage","Pago exitoso ✔ Membresía activada.","success");
         setTimeout(()=>location.reload(),1500);
       }else{
-        setMsg("paypalMessage",result.detail,"error");
+        setMsg("paypalMessage",result.detail || "Error al capturar pago","error");
       }
     },
 
@@ -221,11 +385,74 @@ function initPayPal(){
   }).render("#paypal-button-container");
 }
 
-(function(){
+function toggleClabe(){
+  clabeVisible = !clabeVisible;
+  document.getElementById("clabeDisplay").innerText = clabeVisible ? CLABE : "••••••••••••••9849";
+  document.getElementById("toggleClabeBtn").innerText = clabeVisible ? "Ocultar CLABE" : "Mostrar CLABE";
+}
+
+async function copyClabe(){
+  try{
+    await navigator.clipboard.writeText(CLABE);
+    setMsg("clabeMessage","CLABE copiada al portapapeles ✔","success");
+  }catch(e){
+    const temp = document.createElement("input");
+    temp.value = CLABE;
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand("copy");
+    temp.remove();
+    setMsg("clabeMessage","CLABE copiada al portapapeles ✔","success");
+  }
+}
+
+async function uploadProof(){
+  const userId = getUserId();
+  const file = document.getElementById("proofFile").files[0];
+
+  if(!userId){
+    setMsg("proofMessage","Inicia sesión antes de subir el comprobante.","error");
+    return;
+  }
+
+  if(!file){
+    setMsg("proofMessage","Selecciona una imagen o PDF del comprobante.","error");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try{
+    setMsg("proofMessage","Subiendo comprobante...","warning");
+
+    const res = await fetch(API+"/upload-proof/"+userId,{
+      method:"POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if(res.ok){
+      setMsg("proofMessage",data.message || "Comprobante enviado correctamente.","success");
+      document.getElementById("proofFile").value = "";
+    }else{
+      setMsg("proofMessage",data.detail || "Error al subir comprobante.","error");
+    }
+  }catch(e){
+    setMsg("proofMessage","Error de conexión al subir comprobante.","error");
+  }
+}
+
+(async function(){
   const token = getToken();
+  const userId = getUserId();
+  const userName = localStorage.getItem("user_name") || "Usuario";
+
   if(token){
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("userBox").classList.remove("hidden");
+    showLoggedLayout();
+    document.getElementById("userInfo").innerText = "Usuario: " + userName;
+    await loadMembership(userId);
     initPayPal();
   }
 })();
