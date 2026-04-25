@@ -281,6 +281,25 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      align-items: center;
+    }
+
+    .action-select {
+      width: auto;
+      min-width: 145px;
+      margin-bottom: 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,120,0,0.25);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .action-select option {
+      background: #111;
+      color: white;
     }
 
     .summary-box {
@@ -435,9 +454,12 @@
 
           <div class="toolbar">
             <input type="text" id="targetUserId" placeholder="user_id para acciones manuales" style="max-width: 320px; margin-bottom:0;" />
-            <button class="btn btn-secondary" onclick="approveDays(7)">Aprobar 7 días</button>
-            <button class="btn btn-secondary" onclick="approveDays(15)">Aprobar 15 días</button>
-            <button class="btn btn-secondary" onclick="approveDays(30)">Aprobar 30 días</button>
+            <select id="manualApproveDays" class="action-select" aria-label="Días de aprobación">
+              <option value="7">Aprobar 7 días</option>
+              <option value="15">Aprobar 15 días</option>
+              <option value="30">Aprobar 30 días</option>
+            </select>
+            <button class="btn btn-secondary" onclick="approveSelectedDays()">Aprobar membresía</button>
             <button class="btn btn-secondary" onclick="extendDays(15)">Extender 15 días</button>
             <button class="btn btn-secondary" onclick="expireMembershipManual()">Vencer membresía</button>
             <button class="btn btn-danger" onclick="deleteUserManual()">Eliminar usuario</button>
@@ -826,9 +848,12 @@
               <td>
                 <div class="action-group">
                   <button class="btn btn-secondary" onclick="setTargetUserId('${escapeHtml(item.user_id)}')">Usar user_id</button>
-                  <button class="btn btn-secondary" onclick="approveMembership('${escapeHtml(item.user_id)}', 7)">7d</button>
-                  <button class="btn btn-secondary" onclick="approveMembership('${escapeHtml(item.user_id)}', 15)">15d</button>
-                  <button class="btn btn-secondary" onclick="approveMembership('${escapeHtml(item.user_id)}', 30)">30d</button>
+                  <select class="action-select" onchange="approveFromDropdown('${escapeHtml(item.user_id)}', this)">
+                    <option value="">Aprobar...</option>
+                    <option value="7">7 días</option>
+                    <option value="15">15 días</option>
+                    <option value="30">30 días</option>
+                  </select>
                   <button class="btn btn-danger" onclick="deleteRequest('${escapeHtml(item.request_id)}')">Eliminar</button>
                 </div>
               </td>
@@ -878,9 +903,12 @@
               <td>
                 <div class="action-group">
                   <button class="btn btn-secondary" onclick="setTargetUserId('${escapeHtml(item.user_id)}')">Usar user_id</button>
-                  <button class="btn btn-secondary" onclick="approveMembership('${escapeHtml(item.user_id)}', 7)">7d</button>
-                  <button class="btn btn-secondary" onclick="approveMembership('${escapeHtml(item.user_id)}', 15)">15d</button>
-                  <button class="btn btn-secondary" onclick="approveMembership('${escapeHtml(item.user_id)}', 30)">30d</button>
+                  <select class="action-select" onchange="approveFromDropdown('${escapeHtml(item.user_id)}', this)">
+                    <option value="">Aprobar...</option>
+                    <option value="7">7 días</option>
+                    <option value="15">15 días</option>
+                    <option value="30">30 días</option>
+                  </select>
                   <button class="btn btn-secondary" onclick="extendMembership('${escapeHtml(item.user_id)}', 15)">Ext. 15d</button>
                   <button class="btn btn-secondary" onclick="expireMembershipFor('${escapeHtml(item.user_id)}')">Vencer</button>
                   <button class="btn btn-danger" onclick="deleteUser('${escapeHtml(item.user_id)}')">Eliminar</button>
@@ -1183,6 +1211,19 @@
       } catch (error) {
         showMessage("actionMessage", `Error de conexión: ${error}`, "error");
       }
+    }
+
+    function approveFromDropdown(userId, selectEl) {
+      const days = Number(selectEl.value);
+      if (!days) return;
+      approveMembership(userId, days);
+      selectEl.value = "";
+    }
+
+    function approveSelectedDays() {
+      const selectEl = document.getElementById("manualApproveDays");
+      const days = Number(selectEl.value);
+      approveDays(days);
     }
 
     function approveDays(days) {
