@@ -86,7 +86,8 @@
     }
 
     .lang-btn,
-    .menu-btn {
+    .menu-btn,
+    .login-btn {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,120,0,0.18);
       color: white;
@@ -99,7 +100,8 @@
     }
 
     .lang-btn:hover,
-    .menu-btn:hover {
+    .menu-btn:hover,
+    .login-btn:hover {
       border-color: orange;
       color: orange;
     }
@@ -108,6 +110,14 @@
       background: orange;
       color: black;
       border-color: orange;
+    }
+
+
+    .login-btn {
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .menu-dropdown {
@@ -285,7 +295,7 @@
 
     .free-picks-layout {
       display: grid;
-      grid-template-columns: 1fr 360px;
+      grid-template-columns: 360px 1fr;
       gap: 22px;
       align-items: start;
     }
@@ -556,6 +566,7 @@
       </div>
 
       <div class="right-zone">
+        <a href="/premium" id="loginButton" class="login-btn">Iniciar sesión</a>
         <button id="btnEs" class="lang-btn active" type="button" onclick="setLanguage('es')">ES</button>
         <button id="btnEn" class="lang-btn" type="button" onclick="setLanguage('en')">EN</button>
       </div>
@@ -603,14 +614,14 @@
 
       <div class="card">
         <div class="free-picks-layout">
+          <div class="promo-video-box" id="freePicksPromoContainer">
+            <div class="muted" id="loadingFreePicksVideoText">Cargando video...</div>
+          </div>
+
           <div id="predictionList" class="picks-grid">
             <div class="pick-card">
               <div class="pick-line" id="loadingPicksText">Cargando picks...</div>
             </div>
-          </div>
-
-          <div class="promo-video-box" id="freePicksPromoContainer">
-            <div class="muted" id="loadingFreePicksVideoText">Cargando video...</div>
           </div>
         </div>
       </div>
@@ -727,6 +738,7 @@
         menuBot: "Bot",
         menuContact: "Contacto",
         menuPremium: "Premium",
+        loginButton: "Iniciar sesión",
 
         heroLine1: "Predicciones",
         heroLine2: "deportivas con",
@@ -789,6 +801,7 @@
         menuBot: "Bot",
         menuContact: "Contact",
         menuPremium: "Premium",
+        loginButton: "Login",
 
         heroLine1: "Sports",
         heroLine2: "predictions with",
@@ -884,6 +897,7 @@
       document.getElementById("menuBot").textContent = t("menuBot");
       document.getElementById("menuContact").textContent = t("menuContact");
       document.getElementById("menuPremium").textContent = t("menuPremium");
+      document.getElementById("loginButton").textContent = t("loginButton");
 
       document.getElementById("heroLine1").textContent = t("heroLine1");
       document.getElementById("heroLine2").textContent = t("heroLine2");
