@@ -1,250 +1,1548 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>ProHeat Sports</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>ProHeat Sports</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/static/logo.png" />
 
-<style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#000;
-  color:white;
-}
+  <style>
+    * { box-sizing: border-box; }
 
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:15px 20px;
-  border-bottom:1px solid rgba(255,165,0,0.2);
-}
+    html { scroll-behavior: smooth; }
 
-.right-menu{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255,140,0,0.14), transparent 28%),
+        radial-gradient(circle at top right, rgba(255,90,0,0.08), transparent 24%),
+        linear-gradient(180deg, #000000 0%, #050505 100%);
+      color: white;
+    }
 
-.btn{
-  background:#111;
-  border:1px solid orange;
-  color:white;
-  padding:8px 15px;
-  border-radius:20px;
-  cursor:pointer;
-}
+    a { color: inherit; text-decoration: none; }
 
-.btn.active{
-  background:orange;
-  color:black;
-}
+    .wrap {
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
 
-/* LOGIN DROPDOWN */
-.login-box{
-  position:absolute;
-  right:20px;
-  top:70px;
-  background:#111;
-  border:1px solid orange;
-  border-radius:10px;
-  padding:15px;
-  display:none;
-  width:250px;
-}
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,120,0,0.14);
+    }
 
-.login-box input{
-  width:100%;
-  margin-bottom:10px;
-  padding:10px;
-  border-radius:8px;
-  border:none;
-  background:#222;
-  color:white;
-}
+    .topbar-inner {
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
 
-.login-box button{
-  width:100%;
-  padding:10px;
-  border:none;
-  background:orange;
-  color:black;
-  border-radius:20px;
-  cursor:pointer;
-}
+    .left-zone,
+    .right-zone {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
 
-.login-box a{
-  color:orange;
-  font-size:12px;
-  cursor:pointer;
-}
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
 
-/* USER DROPDOWN */
-.user-menu{
-  position:relative;
-}
+    .brand img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 14px rgba(255,140,0,0.35));
+    }
 
-.user-dropdown{
-  position:absolute;
-  right:0;
-  top:40px;
-  background:#111;
-  border:1px solid orange;
-  border-radius:10px;
-  display:none;
-}
+    .brand-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: orange;
+      letter-spacing: 1px;
+      text-shadow: 0 0 14px rgba(255,140,0,0.35);
+      white-space: nowrap;
+    }
 
-.user-dropdown button{
-  background:none;
-  border:none;
-  color:white;
-  padding:10px;
-  cursor:pointer;
-  width:100%;
-}
+    .lang-btn,
+    .menu-btn,
+    .login-btn,
+    .user-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.18);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s ease;
+      font-size: 14px;
+    }
 
-.user-dropdown button:hover{
-  color:orange;
-}
+    .lang-btn:hover,
+    .menu-btn:hover,
+    .login-btn:hover,
+    .user-btn:hover {
+      border-color: orange;
+      color: orange;
+    }
 
-.container{
-  padding:20px;
-}
-</style>
+    .lang-btn.active {
+      background: orange;
+      color: black;
+      border-color: orange;
+    }
+
+    .menu-dropdown,
+    .auth-dropdown {
+      position: relative;
+    }
+
+    .menu-list {
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 0;
+      min-width: 240px;
+      background: rgba(10,10,10,0.98);
+      border: 1px solid rgba(255,120,0,0.22);
+      border-radius: 18px;
+      padding: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      display: none;
+      z-index: 100;
+    }
+
+    .menu-list.show { display: block; }
+
+    .menu-item {
+      display: block;
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      color: white;
+      font-weight: bold;
+      border: 1px solid transparent;
+      transition: 0.2s ease;
+    }
+
+    .menu-item:hover {
+      color: orange;
+      border-color: rgba(255,120,0,0.18);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .login-panel,
+    .user-panel {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 310px;
+      background: rgba(10,10,10,0.98);
+      border: 1px solid rgba(255,120,0,0.28);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.42);
+      display: none;
+      z-index: 120;
+    }
+
+    .login-panel.show,
+    .user-panel.show { display: block; }
+
+    .login-panel h3,
+    .user-panel h3 {
+      margin: 0 0 12px;
+      color: orange;
+      font-size: 20px;
+    }
+
+    .login-panel input {
+      width: 100%;
+      padding: 12px 13px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,120,0,0.22);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    .auth-message {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      display: none;
+    }
+
+    .auth-message.show { display: block; }
+    .auth-success { background: rgba(0,180,80,0.14); color: #8cffb4; border: 1px solid rgba(0,180,80,0.24); }
+    .auth-error { background: rgba(255,80,80,0.14); color: #ff9c9c; border: 1px solid rgba(255,80,80,0.24); }
+    .auth-warning { background: rgba(255,191,102,0.14); color: #ffbf66; border: 1px solid rgba(255,191,102,0.24); }
+
+    .small-link {
+      display: inline-block;
+      color: orange;
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .hero { padding: 46px 0 28px; }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .hero-copy h1 {
+      font-size: 74px;
+      line-height: 0.95;
+      margin: 0 0 22px;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    .hero-copy .highlight {
+      color: orange;
+      text-shadow: 0 0 18px rgba(255,140,0,0.28);
+    }
+
+    .hero-copy p {
+      font-size: 22px;
+      color: #cfcfcf;
+      line-height: 1.45;
+      margin: 0 0 26px;
+      max-width: 850px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-main,
+    .btn-secondary {
+      padding: 16px 28px;
+      border-radius: 999px;
+      font-size: 17px;
+      font-weight: bold;
+      transition: 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .btn-main {
+      background: orange;
+      color: black;
+      box-shadow: 0 0 16px rgba(255,140,0,0.22);
+    }
+
+    .btn-main:hover { filter: brightness(1.05); }
+
+    .btn-secondary {
+      border: 1px solid rgba(255,140,0,0.4);
+      color: orange;
+      background: transparent;
+    }
+
+    .btn-secondary:hover {
+      border-color: orange;
+      background: rgba(255,140,0,0.06);
+    }
+
+    .match-center {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,120,0,0.14);
+      border-radius: 28px;
+      padding: 26px;
+      box-shadow: 0 0 18px rgba(255,140,0,0.06);
+    }
+
+    .match-center h2 {
+      margin: 0 0 18px;
+      font-size: 28px;
+      color: #f0f0f0;
+    }
+
+    .match-item {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,120,0,0.12);
+      border-radius: 22px;
+      padding: 18px 22px;
+      margin-bottom: 14px;
+      color: orange;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .match-item:last-child { margin-bottom: 20px; }
+
+    .section { padding: 18px 0 34px; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 38px;
+      color: orange;
+    }
+
+    .section-note {
+      color: #c6c6c6;
+      line-height: 1.55;
+      margin-bottom: 18px;
+      font-size: 16px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.14);
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 0 14px rgba(255,140,0,0.05);
+    }
+
+    .free-picks-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .picks-grid { display: grid; gap: 16px; }
+
+    .pick-card {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .pick-match {
+      font-size: 22px;
+      font-weight: 800;
+      color: orange;
+      margin-bottom: 10px;
+    }
+
+    .pick-line {
+      color: #e2e2e2;
+      line-height: 1.55;
+      font-size: 16px;
+    }
+
+    .promo-video-box {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 14px;
+      min-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .promo-video-box video {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: #000;
+      display: block;
+      box-shadow: 0 0 14px rgba(255,140,0,0.08);
+    }
+
+    .video-split {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 22px;
+      align-items: center;
+    }
+
+    .video-text-box {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .video-box {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .video-box video {
+      width: 100%;
+      max-width: 420px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: #000;
+      display: block;
+      box-shadow: 0 0 14px rgba(255,140,0,0.08);
+    }
+
+    .video-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: orange;
+      margin-bottom: 10px;
+    }
+
+    .video-desc {
+      color: #d6d6d6;
+      line-height: 1.65;
+      font-size: 16px;
+      white-space: pre-wrap;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .bot-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 22px;
+      align-items: center;
+    }
+
+    .bot-image-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .bot-image {
+      width: 100%;
+      max-width: 280px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,120,0,0.16);
+      box-shadow: 0 0 22px rgba(255,140,0,0.12);
+      display: block;
+      background: #000;
+    }
+
+    .info-box {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .info-box h3 {
+      margin-top: 0;
+      color: orange;
+      font-size: 24px;
+    }
+
+    .info-box p, .info-box li {
+      color: #d7d7d7;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    .info-box ul { margin: 0; padding-left: 18px; }
+
+    .premium-status-box {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,120,0,0.14);
+      border-radius: 18px;
+      padding: 18px;
+      color: #d7d7d7;
+      line-height: 1.55;
+    }
+
+    .premium-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .premium-tab {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.22);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s ease;
+    }
+
+    .premium-tab:hover,
+    .premium-tab.active {
+      background: orange;
+      color: black;
+      border-color: orange;
+    }
+
+    .premium-table-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(0,0,0,0.16);
+    }
+
+    .premium-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 850px;
+    }
+
+    .premium-table th,
+    .premium-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      vertical-align: top;
+      text-align: left;
+      font-size: 14px;
+      color: #e6e6e6;
+    }
+
+    .premium-table th {
+      background: rgba(255,120,0,0.08);
+      color: orange;
+      font-weight: bold;
+    }
+
+    .premium-table tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .contact-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .contact-item {
+      display: block;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,120,0,0.14);
+      background: rgba(255,255,255,0.02);
+      color: #f1f1f1;
+      word-break: break-word;
+    }
+
+    .contact-label {
+      display: block;
+      font-size: 13px;
+      color: orange;
+      margin-bottom: 4px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .muted { color: #bfbfbf; }
+
+    .footer {
+      padding: 30px 0 40px;
+      color: #a9a9a9;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1080px) {
+      .hero-grid,
+      .two-col,
+      .bot-grid,
+      .video-split,
+      .free-picks-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-copy h1 { font-size: 58px; }
+
+      .video-box { order: 2; }
+      .video-text-box { order: 1; }
+    }
+
+    @media (max-width: 700px) {
+      .brand img { width: 52px; height: 52px; }
+      .brand-title { font-size: 20px; }
+      .hero-copy h1 { font-size: 44px; }
+      .hero-copy p { font-size: 18px; }
+      .section-title h2 { font-size: 30px; }
+      .match-item, .pick-match { font-size: 19px; }
+      .topbar-inner { justify-content: center; }
+      .left-zone, .right-zone { justify-content: center; }
+      .menu-list {
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .login-panel,
+      .user-panel {
+        right: 50%;
+        transform: translateX(50%);
+        width: min(310px, calc(100vw - 32px));
+      }
+    }
+  </style>
 </head>
 
 <body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="left-zone">
+        <div class="menu-dropdown">
+          <button class="menu-btn" id="menuButton" type="button" onclick="toggleMenu()">☰ Menú</button>
+          <div class="menu-list" id="menuList">
+            <a class="menu-item" href="#home" id="menuHome" onclick="closeMenu()">Home</a>
+            <a class="menu-item" href="#free-picks" id="menuPredictions" onclick="closeMenu()">Predicciones gratis</a>
+            <a class="menu-item" href="#videopick" id="menuVideoPick" onclick="closeMenu()">VideoPick</a>
+            <a class="menu-item" href="#bot" id="menuBot" onclick="closeMenu()">Bot</a>
+            <a class="menu-item" href="#premium-inline" id="menuPremiumInline" onclick="closeMenu()">Premium</a>
+            <a class="menu-item" href="#contacto" id="menuContact" onclick="closeMenu()">Contacto</a>
+          </div>
+        </div>
 
-<!-- TOPBAR -->
-<div class="topbar">
-  <div>🔥 <b>PROHEAT SPORTS</b></div>
+        <div class="brand">
+          <img src="/static/logo.png" alt="ProHeat Sports">
+          <div class="brand-title">PROHEAT SPORTS</div>
+        </div>
+      </div>
 
-  <div class="right-menu">
+      <div class="right-zone">
+        <div class="auth-dropdown">
+          <button id="loginButton" class="login-btn" type="button" onclick="toggleLoginPanel()">Iniciar sesión</button>
+          <button id="userButton" class="user-btn hidden" type="button" onclick="toggleUserPanel()">Hola</button>
 
-    <!-- LOGIN / USER -->
-    <div id="authArea"></div>
+          <div id="loginPanel" class="login-panel">
+            <h3>Iniciar sesión</h3>
+            <input type="email" id="inlineEmail" placeholder="Correo">
+            <input type="password" id="inlinePassword" placeholder="Contraseña">
+            <button class="btn-main" style="width:100%;" onclick="inlineLogin()">Entrar</button>
+            <a class="small-link" href="/premium">¿No tienes cuenta? Crear cuenta</a>
+            <div id="inlineLoginMessage" class="auth-message"></div>
+          </div>
 
-    <!-- TRADUCCIÓN -->
-    <button class="btn active">ES</button>
-    <button class="btn">EN</button>
+          <div id="userPanel" class="user-panel">
+            <h3 id="userPanelTitle">Mi cuenta</h3>
+            <div id="userPanelStatus" class="muted">Sesión activa.</div>
+            <button class="btn-secondary" style="width:100%; margin-top:14px;" onclick="logoutUser()">Cerrar sesión</button>
+          </div>
+        </div>
 
-  </div>
-</div>
-
-<!-- LOGIN DROPDOWN -->
-<div id="loginBox" class="login-box">
-  <h3>Iniciar sesión</h3>
-  <input type="text" id="email" placeholder="Correo">
-  <input type="password" id="password" placeholder="Contraseña">
-  <button onclick="login()">Entrar</button>
-
-  <br><br>
-  <a onclick="goToRegister()">¿No tienes cuenta? Crear cuenta</a>
-</div>
-
-<div class="container">
-  <h1>Predicciones deportivas con estructura centralizada</h1>
-</div>
-
-<script>
-
-// =========================
-// INIT
-// =========================
-window.onload = function(){
-  checkSession();
-}
-
-// =========================
-// CHECK SESSION
-// =========================
-function checkSession(){
-  const user = localStorage.getItem("user_name");
-
-  if(user){
-    showUser(user);
-  }else{
-    showLoginButton();
-  }
-}
-
-// =========================
-// SHOW LOGIN BUTTON
-// =========================
-function showLoginButton(){
-  document.getElementById("authArea").innerHTML = `
-    <button class="btn" onclick="toggleLogin()">Iniciar sesión</button>
-  `;
-}
-
-// =========================
-// SHOW USER
-// =========================
-function showUser(name){
-  document.getElementById("authArea").innerHTML = `
-    <div class="user-menu">
-      <button class="btn" onclick="toggleUserMenu()">Hola, ${name}</button>
-
-      <div id="userDropdown" class="user-dropdown">
-        <button onclick="logout()">Cerrar sesión</button>
+        <button id="btnEs" class="lang-btn active" type="button" onclick="setLanguage('es')">ES</button>
+        <button id="btnEn" class="lang-btn" type="button" onclick="setLanguage('en')">EN</button>
       </div>
     </div>
-  `;
-}
+  </header>
 
-// =========================
-// TOGGLE LOGIN
-// =========================
-function toggleLogin(){
-  const box = document.getElementById("loginBox");
-  box.style.display = box.style.display === "block" ? "none" : "block";
-}
+  <main class="wrap">
+    <section class="hero" id="home">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1>
+            <span id="heroLine1">Predicciones</span><br>
+            <span id="heroLine2">deportivas con</span><br>
+            <span class="highlight" id="heroLine3">estructura</span><br>
+            <span class="highlight" id="heroLine4">centralizada</span>
+          </h1>
 
-// =========================
-// LOGIN (SIMULADO)
-// =========================
-function login(){
-  const email = document.getElementById("email").value;
+          <p id="heroDescription">
+            ProHeat Sports integra picks públicos, contenido premium y panel administrativo desde una sola infraestructura. Todo alimentado directamente desde el backend central de ProHeat.
+          </p>
 
-  if(!email){
-    alert("Ingresa correo");
-    return;
-  }
+          <div class="hero-actions">
+            <a href="#free-picks" class="btn-main" id="btnViewPicks">Ver picks</a>
+            <a href="#bot" class="btn-secondary" id="btnViewBot">Ver bot</a>
+          </div>
+        </div>
 
-  // SIMULACIÓN
-  localStorage.setItem("user_name", "Carlos");
-  localStorage.setItem("user_id", "user_123");
+        <div class="match-center">
+          <h2 id="matchCenterTitle">Match Center</h2>
+          <div id="matchCenterList">
+            <div class="match-item">Cargando...</div>
+          </div>
+          <a href="#free-picks" class="btn-main" id="btnGoFreePicks">Ir a picks gratuitas</a>
+        </div>
+      </div>
+    </section>
 
-  location.reload();
-}
+    <section class="section" id="free-picks">
+      <div class="section-title">
+        <h2 id="freePicksTitle">🔥 Picks Gratuitas</h2>
+      </div>
+      <div class="section-note" id="freePicksNote">
+        Consulta las selecciones públicas del día cargadas desde el backend central de ProHeat.
+      </div>
 
-// =========================
-// LOGOUT
-// =========================
-function logout(){
-  localStorage.removeItem("user_name");
-  localStorage.removeItem("user_id");
+      <div class="card">
+        <div class="free-picks-layout">
+          <div class="promo-video-box" id="freePicksPromoContainer">
+            <div class="muted" id="loadingFreePicksVideoText">Cargando video...</div>
+          </div>
 
-  location.reload();
-}
+          <div id="predictionList" class="picks-grid">
+            <div class="pick-card">
+              <div class="pick-line" id="loadingPicksText">Cargando picks...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-// =========================
-// USER MENU
-// =========================
-function toggleUserMenu(){
-  const menu = document.getElementById("userDropdown");
-  menu.style.display = menu.style.display === "block" ? "none" : "block";
-}
+    <section class="section" id="videopick">
+      <div class="section-title">
+        <h2 id="videoSectionTitle">🎥 VideoPick del Día</h2>
+      </div>
+      <div class="section-note" id="videoSectionNote">
+        Mira el videopick destacado del día con reproducción automática en silencio.
+      </div>
 
-// =========================
-// REGISTER
-// =========================
-function goToRegister(){
-  window.location.href = "/premium";
-}
+      <div class="card" id="videoPickContainer">
+        <div class="muted" id="loadingVideoText">Cargando VideoPick...</div>
+      </div>
+    </section>
 
-</script>
+    <section class="section" id="bot">
+      <div class="section-title">
+        <h2 id="botSectionTitle">🤖 Bot ProHeat Sports</h2>
+      </div>
+      <div class="section-note" id="botSectionNote">
+        Accede al bot oficial para recibir contenido, análisis y herramientas de ProHeat Sports.
+      </div>
 
+      <div class="card bot-grid">
+        <div class="bot-image-wrap">
+          <img src="/static/imagenbot.png" alt="Bot ProHeat Sports" class="bot-image">
+        </div>
+
+        <div class="info-box">
+          <h3 id="botBoxTitle">Bot oficial</h3>
+          <p id="botBoxText">
+            Usa el bot de ProHeat Sports para consultar contenido exclusivo, navegar por secciones y acceder a herramientas deportivas desde Telegram.
+          </p>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin:18px 0 20px;">
+            <a class="btn-main" href="https://t.me/ProHeatSports_Bot" target="_blank" rel="noopener noreferrer" id="botButton">
+              Abrir bot
+            </a>
+            <a class="btn-secondary" href="https://t.me/proheatsports" target="_blank" rel="noopener noreferrer" id="botChannelButton">
+              Ver canal
+            </a>
+          </div>
+
+          <h3 id="botFeaturesTitle">Qué puedes encontrar</h3>
+          <ul>
+            <li id="botFeature1">Acceso rápido a contenido y secciones ProHeat.</li>
+            <li id="botFeature2">Herramientas y navegación centralizada.</li>
+            <li id="botFeature3">Integración con contenido premium y deportivo.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="premium-inline">
+      <div class="section-title">
+        <h2 id="premiumInlineTitle">🔥 Premium ProHeat</h2>
+      </div>
+      <div class="section-note" id="premiumInlineNote">
+        Inicia sesión para consultar tus secciones Premium directamente en esta página.
+      </div>
+
+      <div class="card">
+        <div id="premiumLockedBox" class="premium-status-box">
+          <strong>Premium bloqueado.</strong><br>
+          Inicia sesión arriba. Si tu membresía está activa, aquí aparecerán las pestañas Premium.
+          Si no tienes Premium, puedes crear cuenta o actualizar desde la página Premium.
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
+            <button class="btn-main" onclick="toggleLoginPanel()">Iniciar sesión</button>
+            <a class="btn-secondary" href="/premium">Crear cuenta / Actualizar Premium</a>
+          </div>
+        </div>
+
+        <div id="premiumFreeSessionBox" class="premium-status-box hidden">
+          <strong>Sesión gratuita activa.</strong><br>
+          Tu cuenta está iniciada, pero tu membresía Premium no está activa.
+          Puedes seguir usando la versión gratuita o actualizar a Premium.
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
+            <a class="btn-main" href="/premium">Actualizar a Premium</a>
+            <a class="btn-secondary" href="#free-picks">Ver picks gratuitas</a>
+          </div>
+        </div>
+
+        <div id="premiumTabsBox" class="hidden">
+          <div class="premium-tabs" id="premiumTabs"></div>
+          <div id="premiumTableContainer" class="premium-table-wrap">
+            <div class="premium-status-box">Cargando contenido Premium...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="contacto">
+      <div class="section-title">
+        <h2 id="contactSectionTitle">📬 Contacto</h2>
+      </div>
+      <div class="section-note" id="contactSectionNote">
+        Ponte en contacto con ProHeat Sports por nuestros canales oficiales.
+      </div>
+
+      <div class="card two-col">
+        <div class="info-box">
+          <h3 id="contactInfoTitle">Canales oficiales</h3>
+          <div class="contact-list">
+            <a class="contact-item" href="https://www.instagram.com/proheatsports" target="_blank" rel="noopener noreferrer">
+              <span class="contact-label" id="contactInstagramLabel">Instagram</span>
+              @proheatsports
+            </a>
+
+            <a class="contact-item" href="https://t.me/proheatsports" target="_blank" rel="noopener noreferrer">
+              <span class="contact-label" id="contactTelegramLabel">Telegram</span>
+              t.me/proheatsports
+            </a>
+
+            <a class="contact-item" href="mailto:proheatsports@gmail.com">
+              <span class="contact-label" id="contactEmailLabel">Correo</span>
+              proheatsports@gmail.com
+            </a>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <h3 id="contactHelpTitle">Atención</h3>
+          <p id="contactHelpText">
+            Para soporte, información sobre membresías, contenido premium o colaboraciones, usa cualquiera de los canales oficiales de ProHeat Sports.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" id="footerText">
+    ProHeat Sports · Inteligencia deportiva basada en datos
+  </footer>
+
+  <script>
+    const API = window.location.origin;
+
+    let currentLanguage = localStorage.getItem("proheat_lang") || "es";
+    let publicPicksCache = [];
+    let videoPickCache = null;
+    let freePicksVideoCache = null;
+    let premiumCache = {};
+    let currentPremiumTab = "general";
+
+    const premiumSections = [
+      { key: "general", labelEs: "Partidos del día", labelEn: "Today's Matches", endpoint: "/api/data/general" },
+      { key: "ultra", labelEs: "Picks Ultrafiltradas", labelEn: "Ultra-filtered Picks", endpoint: "/api/data/ultra" },
+      { key: "stakes", labelEs: "Control de banca", labelEn: "Bankroll Control", endpoint: "/api/data/stakes" },
+      { key: "combinadas", labelEs: "Combinadas IA", labelEn: "AI Parlays", endpoint: "/api/data/combinadas" },
+      { key: "goles", labelEs: "Goles", labelEn: "Goals", endpoint: "/api/data/goles" },
+      { key: "top", labelEs: "Top Valor Estadístico", labelEn: "Top Statistical Value", endpoint: "/api/data/top" },
+      { key: "alta", labelEs: "Equipos confiables", labelEn: "Reliable Teams", endpoint: "/api/data/alta-confianza" },
+      { key: "simples", labelEs: "Picks Simples", labelEn: "Single Picks", endpoint: "/api/data/public" },
+      { key: "inferno", labelEs: "Combinadas Inferno", labelEn: "Inferno Parlays", endpoint: "/api/data/inferno" }
+    ];
+
+    const i18n = {
+      es: {
+        menuButton: "☰ Menú",
+        menuHome: "Home",
+        menuPredictions: "Predicciones gratis",
+        menuVideoPick: "VideoPick",
+        menuBot: "Bot",
+        menuPremiumInline: "Premium",
+        menuContact: "Contacto",
+        loginButton: "Iniciar sesión",
+
+        heroLine1: "Predicciones",
+        heroLine2: "deportivas con",
+        heroLine3: "estructura",
+        heroLine4: "centralizada",
+        heroDescription: "ProHeat Sports integra picks públicos, contenido premium y panel administrativo desde una sola infraestructura. Todo alimentado directamente desde el backend central de ProHeat.",
+
+        btnViewPicks: "Ver picks",
+        btnViewBot: "Ver bot",
+        matchCenterTitle: "Match Center",
+        btnGoFreePicks: "Ir a picks gratuitas",
+
+        freePicksTitle: "🔥 Picks Gratuitas",
+        freePicksNote: "Consulta las selecciones públicas del día cargadas desde el backend central de ProHeat.",
+        loadingPicksText: "Cargando picks...",
+        loadingFreePicksVideoText: "Cargando video...",
+        noPicks: "No hay picks disponibles por el momento.",
+        picksError: "Error cargando picks.",
+        noFreePicksVideo: "No hay video disponible.",
+        freePicksVideoError: "Error cargando video.",
+
+        videoSectionTitle: "🎥 VideoPick del Día",
+        videoSectionNote: "Mira el videopick destacado del día con reproducción automática en silencio.",
+        loadingVideoText: "Cargando VideoPick...",
+        noVideo: "No hay VideoPick disponible.",
+        videoError: "Error cargando VideoPick.",
+        fallbackVideoTitle: "VideoPick del Día",
+
+        botSectionTitle: "🤖 Bot ProHeat Sports",
+        botSectionNote: "Accede al bot oficial para recibir contenido, análisis y herramientas de ProHeat Sports.",
+        botBoxTitle: "Bot oficial",
+        botBoxText: "Usa el bot de ProHeat Sports para consultar contenido exclusivo, navegar por secciones y acceder a herramientas deportivas desde Telegram.",
+        botButton: "Abrir bot",
+        botChannelButton: "Ver canal",
+        botFeaturesTitle: "Qué puedes encontrar",
+        botFeature1: "Acceso rápido a contenido y secciones ProHeat.",
+        botFeature2: "Herramientas y navegación centralizada.",
+        botFeature3: "Integración con contenido premium y deportivo.",
+
+        premiumInlineTitle: "🔥 Premium ProHeat",
+        premiumInlineNote: "Inicia sesión para consultar tus secciones Premium directamente en esta página.",
+
+        contactSectionTitle: "📬 Contacto",
+        contactSectionNote: "Ponte en contacto con ProHeat Sports por nuestros canales oficiales.",
+        contactInfoTitle: "Canales oficiales",
+        contactInstagramLabel: "Instagram",
+        contactTelegramLabel: "Telegram",
+        contactEmailLabel: "Correo",
+        contactHelpTitle: "Atención",
+        contactHelpText: "Para soporte, información sobre membresías, contenido premium o colaboraciones, usa cualquiera de los canales oficiales de ProHeat Sports.",
+
+        footerText: "ProHeat Sports · Inteligencia deportiva basada en datos"
+      },
+
+      en: {
+        menuButton: "☰ Menu",
+        menuHome: "Home",
+        menuPredictions: "Free predictions",
+        menuVideoPick: "VideoPick",
+        menuBot: "Bot",
+        menuPremiumInline: "Premium",
+        menuContact: "Contact",
+        loginButton: "Login",
+
+        heroLine1: "Sports",
+        heroLine2: "predictions with",
+        heroLine3: "centralized",
+        heroLine4: "structure",
+        heroDescription: "ProHeat Sports brings together public picks, premium content, and an admin panel within a single infrastructure. Everything is powered directly from the central ProHeat backend.",
+
+        btnViewPicks: "View picks",
+        btnViewBot: "View bot",
+        matchCenterTitle: "Match Center",
+        btnGoFreePicks: "Go to free picks",
+
+        freePicksTitle: "🔥 Free Picks",
+        freePicksNote: "Check today’s public selections loaded from the central ProHeat backend.",
+        loadingPicksText: "Loading picks...",
+        loadingFreePicksVideoText: "Loading video...",
+        noPicks: "No picks are available at the moment.",
+        picksError: "Error loading picks.",
+        noFreePicksVideo: "No video available.",
+        freePicksVideoError: "Error loading video.",
+
+        videoSectionTitle: "🎥 VideoPick of the Day",
+        videoSectionNote: "Watch today’s featured videopick with muted autoplay.",
+        loadingVideoText: "Loading VideoPick...",
+        noVideo: "No VideoPick available.",
+        videoError: "Error loading VideoPick.",
+        fallbackVideoTitle: "VideoPick of the Day",
+
+        botSectionTitle: "🤖 ProHeat Sports Bot",
+        botSectionNote: "Access the official bot to receive ProHeat Sports content, analysis, and tools.",
+        botBoxTitle: "Official bot",
+        botBoxText: "Use the ProHeat Sports bot to explore exclusive content, browse sections, and access sports tools from Telegram.",
+        botButton: "Open bot",
+        botChannelButton: "View channel",
+        botFeaturesTitle: "What you can find",
+        botFeature1: "Fast access to ProHeat content and sections.",
+        botFeature2: "Tools and centralized navigation.",
+        botFeature3: "Integration with premium and sports content.",
+
+        premiumInlineTitle: "🔥 ProHeat Premium",
+        premiumInlineNote: "Log in to view your Premium sections directly on this page.",
+
+        contactSectionTitle: "📬 Contact",
+        contactSectionNote: "Get in touch with ProHeat Sports through our official channels.",
+        contactInfoTitle: "Official channels",
+        contactInstagramLabel: "Instagram",
+        contactTelegramLabel: "Telegram",
+        contactEmailLabel: "Email",
+        contactHelpTitle: "Support",
+        contactHelpText: "For support, membership information, premium content, or collaborations, use any of ProHeat Sports’ official channels.",
+
+        footerText: "ProHeat Sports · Data-powered sports intelligence"
+      }
+    };
+
+    function t(key) {
+      return i18n[currentLanguage][key] || key;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function localizeField(item, esKey, enKey) {
+      if (currentLanguage === "en" && item && item[enKey]) return item[enKey];
+      return item?.[esKey] ?? "";
+    }
+
+    function getToken() { return localStorage.getItem("token") || ""; }
+    function getUserId() { return localStorage.getItem("user_id") || ""; }
+    function getUserName() { return localStorage.getItem("user_name") || ""; }
+
+    function saveUserSession(data) {
+      localStorage.setItem("token", data.token || "");
+      localStorage.setItem("user_id", data.user_id || "");
+      localStorage.setItem("user_name", data.name || "");
+      localStorage.setItem("user_email", data.email || "");
+    }
+
+    function logoutUser() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("user_name");
+      localStorage.removeItem("user_email");
+      closeUserPanel();
+      applyAuthUI();
+      updatePremiumAccess("logged_out");
+    }
+
+    function toggleMenu() {
+      document.getElementById("menuList").classList.toggle("show");
+      closeLoginPanel();
+      closeUserPanel();
+    }
+
+    function closeMenu() {
+      document.getElementById("menuList").classList.remove("show");
+    }
+
+    function toggleLoginPanel() {
+      closeMenu();
+      closeUserPanel();
+      document.getElementById("loginPanel").classList.toggle("show");
+    }
+
+    function closeLoginPanel() {
+      document.getElementById("loginPanel").classList.remove("show");
+    }
+
+    function toggleUserPanel() {
+      closeMenu();
+      closeLoginPanel();
+      document.getElementById("userPanel").classList.toggle("show");
+    }
+
+    function closeUserPanel() {
+      document.getElementById("userPanel").classList.remove("show");
+    }
+
+    window.addEventListener("click", (event) => {
+      const menu = document.getElementById("menuList");
+      const menuButton = document.getElementById("menuButton");
+      const loginPanel = document.getElementById("loginPanel");
+      const loginButton = document.getElementById("loginButton");
+      const userPanel = document.getElementById("userPanel");
+      const userButton = document.getElementById("userButton");
+
+      if (!menu.contains(event.target) && !menuButton.contains(event.target)) closeMenu();
+      if (!loginPanel.contains(event.target) && !loginButton.contains(event.target)) closeLoginPanel();
+      if (!userPanel.contains(event.target) && !userButton.contains(event.target)) closeUserPanel();
+    });
+
+    function showAuthMessage(text, type) {
+      const el = document.getElementById("inlineLoginMessage");
+      el.textContent = text;
+      el.className = `auth-message show auth-${type || "warning"}`;
+    }
+
+    async function inlineLogin() {
+      const email = document.getElementById("inlineEmail").value.trim();
+      const password = document.getElementById("inlinePassword").value.trim();
+
+      if (!email || !password) {
+        showAuthMessage("Ingresa correo y contraseña.", "error");
+        return;
+      }
+
+      try {
+        showAuthMessage("Iniciando sesión...", "warning");
+
+        const res = await fetch(`${API}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showAuthMessage(data.detail || "No se pudo iniciar sesión.", "error");
+          return;
+        }
+
+        saveUserSession(data);
+        closeLoginPanel();
+        applyAuthUI();
+        await checkMembershipAndPremium(true);
+      } catch (error) {
+        showAuthMessage("Error de conexión al iniciar sesión.", "error");
+      }
+    }
+
+    function applyAuthUI() {
+      const token = getToken();
+      const name = getUserName();
+
+      const loginButton = document.getElementById("loginButton");
+      const userButton = document.getElementById("userButton");
+      const userPanelTitle = document.getElementById("userPanelTitle");
+
+      if (token && name) {
+        loginButton.classList.add("hidden");
+        userButton.classList.remove("hidden");
+        userButton.textContent = `Hola, ${name}`;
+        userPanelTitle.textContent = `Hola, ${name}`;
+      } else {
+        loginButton.classList.remove("hidden");
+        userButton.classList.add("hidden");
+      }
+    }
+
+    async function checkMembershipAndPremium(scrollToPremium = false) {
+      const userId = getUserId();
+      if (!getToken() || !userId) {
+        updatePremiumAccess("logged_out");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/membership/${encodeURIComponent(userId)}`);
+        const data = await res.json();
+        const membership = data.membership || "pending";
+
+        const statusEl = document.getElementById("userPanelStatus");
+        statusEl.textContent = `Membresía: ${membership}`;
+
+        if (membership === "active") {
+          updatePremiumAccess("active");
+          await loadPremiumSection(currentPremiumTab);
+          if (scrollToPremium) {
+            document.getElementById("premium-inline").scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        } else {
+          updatePremiumAccess("free");
+          if (scrollToPremium) {
+            document.getElementById("premium-inline").scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      } catch (error) {
+        updatePremiumAccess("free");
+      }
+    }
+
+    function updatePremiumAccess(state) {
+      const locked = document.getElementById("premiumLockedBox");
+      const free = document.getElementById("premiumFreeSessionBox");
+      const tabs = document.getElementById("premiumTabsBox");
+
+      locked.classList.add("hidden");
+      free.classList.add("hidden");
+      tabs.classList.add("hidden");
+
+      if (state === "active") {
+        tabs.classList.remove("hidden");
+        renderPremiumTabs();
+      } else if (state === "free") {
+        free.classList.remove("hidden");
+      } else {
+        locked.classList.remove("hidden");
+      }
+    }
+
+    function setLanguage(lang) {
+      currentLanguage = lang;
+      localStorage.setItem("proheat_lang", lang);
+      applyLanguage();
+      renderPicks(publicPicksCache);
+      renderMatchCenter(publicPicksCache);
+      renderVideoPick(videoPickCache);
+      renderFreePicksVideo(freePicksVideoCache);
+      renderPremiumTabs();
+      if (premiumCache[currentPremiumTab]) renderPremiumTable(currentPremiumTab, premiumCache[currentPremiumTab]);
+    }
+
+    function applyLanguage() {
+      document.documentElement.lang = currentLanguage;
+
+      document.getElementById("menuButton").textContent = t("menuButton");
+      document.getElementById("menuHome").textContent = t("menuHome");
+      document.getElementById("menuPredictions").textContent = t("menuPredictions");
+      document.getElementById("menuVideoPick").textContent = t("menuVideoPick");
+      document.getElementById("menuBot").textContent = t("menuBot");
+      document.getElementById("menuPremiumInline").textContent = t("menuPremiumInline");
+      document.getElementById("menuContact").textContent = t("menuContact");
+      document.getElementById("loginButton").textContent = t("loginButton");
+
+      document.getElementById("heroLine1").textContent = t("heroLine1");
+      document.getElementById("heroLine2").textContent = t("heroLine2");
+      document.getElementById("heroLine3").textContent = t("heroLine3");
+      document.getElementById("heroLine4").textContent = t("heroLine4");
+      document.getElementById("heroDescription").textContent = t("heroDescription");
+
+      document.getElementById("btnViewPicks").textContent = t("btnViewPicks");
+      document.getElementById("btnViewBot").textContent = t("btnViewBot");
+
+      document.getElementById("matchCenterTitle").textContent = t("matchCenterTitle");
+      document.getElementById("btnGoFreePicks").textContent = t("btnGoFreePicks");
+
+      document.getElementById("freePicksTitle").textContent = t("freePicksTitle");
+      document.getElementById("freePicksNote").textContent = t("freePicksNote");
+
+      const loadingPicksEl = document.getElementById("loadingPicksText");
+      if (loadingPicksEl) loadingPicksEl.textContent = t("loadingPicksText");
+
+      const loadingFreePicksVideoEl = document.getElementById("loadingFreePicksVideoText");
+      if (loadingFreePicksVideoEl) loadingFreePicksVideoEl.textContent = t("loadingFreePicksVideoText");
+
+      document.getElementById("videoSectionTitle").textContent = t("videoSectionTitle");
+      document.getElementById("videoSectionNote").textContent = t("videoSectionNote");
+
+      document.getElementById("botSectionTitle").textContent = t("botSectionTitle");
+      document.getElementById("botSectionNote").textContent = t("botSectionNote");
+      document.getElementById("botBoxTitle").textContent = t("botBoxTitle");
+      document.getElementById("botBoxText").textContent = t("botBoxText");
+      document.getElementById("botButton").textContent = t("botButton");
+      document.getElementById("botChannelButton").textContent = t("botChannelButton");
+      document.getElementById("botFeaturesTitle").textContent = t("botFeaturesTitle");
+      document.getElementById("botFeature1").textContent = t("botFeature1");
+      document.getElementById("botFeature2").textContent = t("botFeature2");
+      document.getElementById("botFeature3").textContent = t("botFeature3");
+
+      document.getElementById("premiumInlineTitle").textContent = t("premiumInlineTitle");
+      document.getElementById("premiumInlineNote").textContent = t("premiumInlineNote");
+
+      document.getElementById("contactSectionTitle").textContent = t("contactSectionTitle");
+      document.getElementById("contactSectionNote").textContent = t("contactSectionNote");
+      document.getElementById("contactInfoTitle").textContent = t("contactInfoTitle");
+      document.getElementById("contactInstagramLabel").textContent = t("contactInstagramLabel");
+      document.getElementById("contactTelegramLabel").textContent = t("contactTelegramLabel");
+      document.getElementById("contactEmailLabel").textContent = t("contactEmailLabel");
+      document.getElementById("contactHelpTitle").textContent = t("contactHelpTitle");
+      document.getElementById("contactHelpText").textContent = t("contactHelpText");
+
+      document.getElementById("footerText").textContent = t("footerText");
+
+      document.getElementById("btnEs").classList.toggle("active", currentLanguage === "es");
+      document.getElementById("btnEn").classList.toggle("active", currentLanguage === "en");
+    }
+
+    function ensureAutoplay(videoElement) {
+      if (!videoElement) return;
+      videoElement.muted = true;
+      videoElement.defaultMuted = true;
+      videoElement.autoplay = true;
+      videoElement.loop = true;
+      videoElement.playsInline = true;
+
+      const playAttempt = () => {
+        const promise = videoElement.play();
+        if (promise && typeof promise.catch === "function") promise.catch(() => {});
+      };
+
+      playAttempt();
+      videoElement.addEventListener("loadedmetadata", playAttempt, { once: true });
+      videoElement.addEventListener("canplay", playAttempt, { once: true });
+    }
+
+    function renderMatchCenter(items) {
+      const container = document.getElementById("matchCenterList");
+
+      if (!items || !items.length) {
+        container.innerHTML = `<div class="match-item">${escapeHtml(t("noPicks"))}</div>`;
+        return;
+      }
+
+      const topItems = items.slice(0, 3);
+
+      container.innerHTML = topItems.map(pick => {
+        const match = localizeField(pick, "partido", "partido_en") || pick.partido || "";
+        return `<div class="match-item">${escapeHtml(match)}</div>`;
+      }).join("");
+    }
+
+    function renderPicks(items) {
+      const container = document.getElementById("predictionList");
+
+      if (!items) {
+        container.innerHTML = `<div class="pick-card"><div class="pick-line">${escapeHtml(t("loadingPicksText"))}</div></div>`;
+        return;
+      }
+
+      if (!items.length) {
+        container.innerHTML = `<div class="pick-card"><div class="pick-line">${escapeHtml(t("noPicks"))}</div></div>`;
+        return;
+      }
+
+      container.innerHTML = items.map(pick => {
+        const match = localizeField(pick, "partido", "partido_en") || "";
+        const prediction1 = localizeField(pick, "prediccion_1", "prediccion_1_en") || "";
+        const prediction2 = localizeField(pick, "prediccion_2", "prediccion_2_en") || "";
+
+        return `
+          <div class="pick-card">
+            <div class="pick-match">${escapeHtml(match)}</div>
+            <div class="pick-line">
+              ${escapeHtml(prediction1)}
+              ${prediction2 ? `<br>${escapeHtml(prediction2)}` : ""}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderFreePicksVideo(item) {
+      const container = document.getElementById("freePicksPromoContainer");
+
+      if (!item) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("noFreePicksVideo"))}</div>`;
+        return;
+      }
+
+      const videoUrl = item.video_url ? `${API}${item.video_url}` : "";
+
+      if (!videoUrl) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("noFreePicksVideo"))}</div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <video id="freePicksPromoPlayer" autoplay muted loop playsinline preload="auto" controls>
+          <source src="${escapeHtml(videoUrl)}" type="video/mp4">
+        </video>
+      `;
+
+      ensureAutoplay(document.getElementById("freePicksPromoPlayer"));
+    }
+
+    function renderVideoPick(item) {
+      const container = document.getElementById("videoPickContainer");
+
+      if (!item) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("noVideo"))}</div>`;
+        return;
+      }
+
+      const title = localizeField(item, "title", "title_en") || t("fallbackVideoTitle");
+      const description = localizeField(item, "description", "description_en") || "";
+      const videoUrl = item.video_url ? `${API}${item.video_url}` : "";
+
+      if (!videoUrl) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("noVideo"))}</div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="video-split">
+          <div class="video-text-box">
+            <div class="video-title">${escapeHtml(title)}</div>
+            <div class="video-desc">${escapeHtml(description)}</div>
+          </div>
+          <div class="video-box">
+            <video id="videoPickPlayer" autoplay muted loop playsinline controls preload="auto">
+              <source src="${escapeHtml(videoUrl)}" type="video/mp4">
+            </video>
+          </div>
+        </div>
+      `;
+
+      ensureAutoplay(document.getElementById("videoPickPlayer"));
+    }
+
+    async function loadPublicPicks() {
+      const container = document.getElementById("predictionList");
+      container.innerHTML = `<div class="pick-card"><div class="pick-line">${escapeHtml(t("loadingPicksText"))}</div></div>`;
+
+      try {
+        const res = await fetch(`${API}/api/data/public`);
+        const data = await res.json();
+        publicPicksCache = Array.isArray(data.items) ? data.items : [];
+        renderPicks(publicPicksCache);
+        renderMatchCenter(publicPicksCache);
+      } catch (error) {
+        container.innerHTML = `<div class="pick-card"><div class="pick-line">${escapeHtml(t("picksError"))}</div></div>`;
+        renderMatchCenter([]);
+      }
+    }
+
+    async function loadFreePicksPromoVideo() {
+      const container = document.getElementById("freePicksPromoContainer");
+      container.innerHTML = `<div class="muted">${escapeHtml(t("loadingFreePicksVideoText"))}</div>`;
+
+      try {
+        const res = await fetch(`${API}/api/data/free-picks-video`);
+        const data = await res.json();
+        freePicksVideoCache = Array.isArray(data.items) && data.items.length ? data.items[0] : null;
+        renderFreePicksVideo(freePicksVideoCache);
+      } catch (error) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("freePicksVideoError"))}</div>`;
+      }
+    }
+
+    async function loadVideoPick() {
+      const container = document.getElementById("videoPickContainer");
+      container.innerHTML = `<div class="muted">${escapeHtml(t("loadingVideoText"))}</div>`;
+
+      try {
+        const res = await fetch(`${API}/api/data/videopicks`);
+        const data = await res.json();
+        videoPickCache = Array.isArray(data.items) && data.items.length ? data.items[0] : null;
+        renderVideoPick(videoPickCache);
+      } catch (error) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("videoError"))}</div>`;
+      }
+    }
+
+    function renderPremiumTabs() {
+      const container = document.getElementById("premiumTabs");
+      if (!container) return;
+
+      container.innerHTML = premiumSections.map(section => {
+        const label = currentLanguage === "en" ? section.labelEn : section.labelEs;
+        return `<button class="premium-tab ${section.key === currentPremiumTab ? "active" : ""}" onclick="loadPremiumSection('${section.key}')">${escapeHtml(label)}</button>`;
+      }).join("");
+    }
+
+    async function loadPremiumSection(key) {
+      currentPremiumTab = key;
+      renderPremiumTabs();
+
+      const section = premiumSections.find(s => s.key === key) || premiumSections[0];
+      const container = document.getElementById("premiumTableContainer");
+      container.innerHTML = `<div class="premium-status-box">Cargando ${escapeHtml(currentLanguage === "en" ? section.labelEn : section.labelEs)}...</div>`;
+
+      if (premiumCache[key]) {
+        renderPremiumTable(key, premiumCache[key]);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}${section.endpoint}`);
+        const data = await res.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        premiumCache[key] = items;
+        renderPremiumTable(key, items);
+      } catch (error) {
+        container.innerHTML = `<div class="premium-status-box">Error cargando la sección Premium.</div>`;
+      }
+    }
+
+    function readableHeader(key) {
+      const map = {
+        partido: "Partido",
+        liga: "Liga",
+        hora: "Hora",
+        pick: "Pick",
+        prediccion: "Predicción",
+        prediccion_1: "Predicción 1",
+        prediccion_2: "Predicción 2",
+        probabilidad: "Probabilidad",
+        ml: "ML",
+        goles: "Goles",
+        goles_local: "Goles Local",
+        goles_visitante: "Goles Visitante",
+        sot: "SoT",
+        corners: "Corners",
+        tarjetas: "Tarjetas",
+        stake: "Stake",
+        notas: "Notas",
+        confianza: "Confianza"
+      };
+      return map[key] || key.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function normalizePremiumValue(value) {
+      if (value === null || value === undefined || value === "") return "";
+      if (typeof value === "object") return JSON.stringify(value);
+      return String(value);
+    }
+
+    function renderPremiumTable(key, items) {
+      const container = document.getElementById("premiumTableContainer");
+      const section = premiumSections.find(s => s.key === key) || premiumSections[0];
+      const label = currentLanguage === "en" ? section.labelEn : section.labelEs;
+
+      if (!items || !items.length) {
+        container.innerHTML = `<div class="premium-status-box">No hay datos disponibles en ${escapeHtml(label)}.</div>`;
+        return;
+      }
+
+      const preferred = ["hora", "liga", "partido", "ml", "pick", "prediccion", "prediccion_1", "prediccion_2", "goles", "goles_local", "goles_visitante", "sot", "corners", "tarjetas", "stake", "probabilidad", "confianza", "notas"];
+      const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item || {}))))
+        .filter(k => !k.endsWith("_en"));
+
+      const orderedKeys = [
+        ...preferred.filter(k => allKeys.includes(k)),
+        ...allKeys.filter(k => !preferred.includes(k)).slice(0, 12)
+      ].slice(0, 14);
+
+      const rows = items.map(item => {
+        return `<tr>${orderedKeys.map(k => `<td>${escapeHtml(normalizePremiumValue(item[k]))}</td>`).join("")}</tr>`;
+      }).join("");
+
+      container.innerHTML = `
+        <table class="premium-table">
+          <thead>
+            <tr>${orderedKeys.map(k => `<th>${escapeHtml(readableHeader(k))}</th>`).join("")}</tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    applyLanguage();
+    applyAuthUI();
+    loadPublicPicks();
+    loadFreePicksPromoVideo();
+    loadVideoPick();
+    checkMembershipAndPremium(false);
+  </script>
 </body>
 </html>
