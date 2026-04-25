@@ -228,7 +228,7 @@ input[type="file"]{
 
 <div class="free-links" style="margin-top:12px;">
   <a class="btn secondary" href="/">Ver versión gratuita</a>
-  <a class="btn secondary" href="#paymentBox">Activar Premium</a>
+  <button class="btn secondary" id="upgradeBtn" onclick="showPaymentSection()">Activar Premium</button>
 </div>
 
 <button class="btn secondary" onclick="logout()">Cerrar sesión</button>
@@ -286,6 +286,7 @@ const CLABE = "072840012825279849";
 let clabeVisible = false;
 let paypalRendered = false;
 let currentUserId = localStorage.getItem("user_id") || "";
+let currentMembership = "pending";
 
 function setMsg(id, msg, type){
   const el = document.getElementById(id);
@@ -307,8 +308,29 @@ function saveSession(data){
   currentUserId = data.user_id;
 }
 
-function getToken(){ return localStorage.getItem("token"); }
-function getUserId(){ return localStorage.getItem("user_id") || currentUserId; }
+function getToken(){ return localStorage.getItem("token") || ""; }
+function getUserId(){ return localStorage.getItem("user_id") || currentUserId || ""; }
+function getUserName(){ return localStorage.getItem("user_name") || "Usuario"; }
+
+const PREMIUM_SECTIONS = [
+  { title: "Tabla General", endpoint: "/api/data/general" },
+  { title: "Tabla Ultrafiltrada", endpoint: "/api/data/ultra" },
+  { title: "Stakes sugeridos", endpoint: "/api/data/stakes" },
+  { title: "Combinadas recomendadas", endpoint: "/api/data/combinadas" },
+  { title: "Goles probables", endpoint: "/api/data/goles" },
+  { title: "Top valor estadístico", endpoint: "/api/data/top" },
+  { title: "Alta confianza", endpoint: "/api/data/alta-confianza" },
+  { title: "Picks Inferno", endpoint: "/api/data/inferno" }
+];
+
+function escapeHtml(value){
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
 
 function logout(){
   localStorage.removeItem("token");
@@ -321,8 +343,37 @@ function logout(){
 function showLoggedLayout(){
   document.getElementById("loginBox").classList.add("hidden");
   document.getElementById("userBox").classList.remove("hidden");
+}
+
+function showLoginLayout(){
+  document.getElementById("loginBox").classList.remove("hidden");
+  document.getElementById("userBox").classList.add("hidden");
+  document.getElementById("premiumContentBox").classList.add("hidden");
+  hidePaymentSection();
+}
+
+function hidePaymentSection(){
+  document.getElementById("paymentBox").classList.add("hidden");
+  document.getElementById("transferBox").classList.add("hidden");
+}
+
+function showPaymentSection(){
   document.getElementById("paymentBox").classList.remove("hidden");
   document.getElementById("transferBox").classList.remove("hidden");
+  initPayPal();
+  setTimeout(() => {
+    document.getElementById("paymentBox").scrollIntoView({behavior:"smooth", block:"start"});
+  }, 100);
+}
+
+function showPremiumContent(){
+  document.getElementById("premiumContentBox").classList.remove("hidden");
+  hidePaymentSection();
+  loadPremiumContent();
+}
+
+function hidePremiumContent(){
+  document.getElementById("premiumContentBox").classList.add("hidden");
 }
 
 async function register(){
@@ -344,7 +395,9 @@ async function register(){
   const data = await res.json();
 
   if(res.ok){
-    setMsg("loginMessage","Cuenta creada ✔ ahora inicia sesión","success");
+    document.getElementById("email").value = email;
+    document.getElementById("password").value = "";
+    setMsg("loginMessage","Cuenta creada ✔ ahora inicia sesión con tu correo y contraseña.","success");
   }else{
     setMsg("loginMessage",data.detail || "Error al crear cuenta","error");
   }
@@ -378,36 +431,126 @@ async function login(){
   document.getElementById("userInfo").innerText = "Usuario: " + (data.name || "Usuario");
 
   await loadMembership(data.user_id);
-  initPayPal();
 }
 
 async function loadMembership(user_id){
   if(!user_id){
     document.getElementById("membershipStatus").innerText = "Estado: sesión no identificada";
-    return;
-  }
-
-  const res = await fetch(API+"/membership/"+user_id);
-  const data = await res.json();
-
-  const status = data.membership || "pending";
-  const pillClass = status === "active" ? "status-active" : status === "expired" ? "status-expired" : "status-pending";
-
-  document.getElementById("membershipStatus").innerHTML =
-    "Estado de membresía: <span class='status-pill "+pillClass+"'>" + status + "</span>";
-
-  if(status === "active"){
-    document.getElementById("premiumActiveBox").classList.remove("hidden");
-    document.getElementById("freeSessionBox").classList.add("hidden");
-  }else{
     document.getElementById("freeSessionBox").classList.remove("hidden");
     document.getElementById("premiumActiveBox").classList.add("hidden");
+    hidePremiumContent();
+    hidePaymentSection();
+    return "pending";
+  }
+
+  try{
+    const res = await fetch(API+"/membership/"+user_id);
+    const data = await res.json();
+
+    const status = data.membership || "pending";
+    currentMembership = status;
+    const pillClass = status === "active" ? "status-active" : status === "expired" ? "status-expired" : "status-pending";
+
+    document.getElementById("membershipStatus").innerHTML =
+      "Estado de membresía: <span class='status-pill "+pillClass+"'>" + escapeHtml(status) + "</span>";
+
+    if(status === "active"){
+      document.getElementById("premiumActiveBox").classList.remove("hidden");
+      document.getElementById("freeSessionBox").classList.add("hidden");
+      document.getElementById("upgradeBtn").classList.add("hidden");
+      showPremiumContent();
+    }else{
+      document.getElementById("freeSessionBox").classList.remove("hidden");
+      document.getElementById("premiumActiveBox").classList.add("hidden");
+      document.getElementById("upgradeBtn").classList.remove("hidden");
+      document.getElementById("upgradeBtn").innerText = "Actualizar a Premium";
+      hidePremiumContent();
+      hidePaymentSection();
+    }
+
+    return status;
+  }catch(e){
+    document.getElementById("membershipStatus").innerText = "Estado: no se pudo consultar membresía";
+    document.getElementById("freeSessionBox").classList.remove("hidden");
+    document.getElementById("premiumActiveBox").classList.add("hidden");
+    document.getElementById("upgradeBtn").classList.remove("hidden");
+    hidePremiumContent();
+    hidePaymentSection();
+    return "pending";
+  }
+}
+
+function formatFieldName(key){
+  return String(key)
+    .replaceAll("_"," ")
+    .replaceAll("-"," ")
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function renderPremiumItem(item){
+  if(!item || typeof item !== "object"){
+    return `<div class="premium-item">${escapeHtml(item)}</div>`;
+  }
+
+  const title = item.partido || item.Partido || item.match || item.Match || item.nombre || item.Nombre || item.pick || item.Pick || "Pick Premium";
+  const fields = Object.entries(item)
+    .filter(([key]) => !["partido","Partido","match","Match","nombre","Nombre"].includes(key))
+    .map(([key,value]) => `<div class="premium-field"><strong>${escapeHtml(formatFieldName(key))}:</strong> ${escapeHtml(value)}</div>`)
+    .join("");
+
+  return `
+    <div class="premium-item">
+      <div class="premium-item-title">${escapeHtml(title)}</div>
+      ${fields || `<div class="premium-field">Información premium disponible.</div>`}
+    </div>
+  `;
+}
+
+async function loadPremiumContent(){
+  const grid = document.getElementById("premiumContentGrid");
+  const msg = document.getElementById("premiumContentMessage");
+
+  grid.innerHTML = `<div class="premium-empty">Cargando contenido premium...</div>`;
+  msg.classList.add("hidden");
+
+  try{
+    const sections = await Promise.all(PREMIUM_SECTIONS.map(async section => {
+      try{
+        const res = await fetch(API + section.endpoint);
+        const data = await res.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        return {...section, items};
+      }catch(e){
+        return {...section, items: [], error: true};
+      }
+    }));
+
+    grid.innerHTML = sections.map(section => {
+      const body = section.items.length
+        ? `<div class="premium-items">${section.items.map(renderPremiumItem).join("")}</div>`
+        : `<div class="premium-empty">${section.error ? "No se pudo cargar esta sección." : "Sin datos cargados por ahora."}</div>`;
+
+      return `
+        <div class="premium-section">
+          <h3>${escapeHtml(section.title)}</h3>
+          ${body}
+        </div>
+      `;
+    }).join("");
+  }catch(e){
+    setMsg("premiumContentMessage","Error cargando contenido premium.","error");
+    grid.innerHTML = `<div class="premium-empty">No se pudo cargar el contenido premium.</div>`;
   }
 }
 
 function initPayPal(){
   if(paypalRendered) return;
   paypalRendered = true;
+
+  if(!window.paypal){
+    setMsg("paypalMessage","PayPal no cargó correctamente. Recarga la página.","error");
+    return;
+  }
 
   paypal.Buttons({
 
@@ -513,13 +656,14 @@ async function uploadProof(){
 (async function(){
   const token = getToken();
   const userId = getUserId();
-  const userName = localStorage.getItem("user_name") || "Usuario";
+  const userName = getUserName();
 
-  if(token){
+  if(token && userId){
     showLoggedLayout();
     document.getElementById("userInfo").innerText = "Usuario: " + userName;
     await loadMembership(userId);
-    initPayPal();
+  }else{
+    showLoginLayout();
   }
 })();
 </script>
