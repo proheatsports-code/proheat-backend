@@ -86,8 +86,7 @@
     }
 
     .lang-btn,
-    .menu-btn,
-    .login-btn {
+    .menu-btn {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,120,0,0.18);
       color: white;
@@ -100,8 +99,7 @@
     }
 
     .lang-btn:hover,
-    .menu-btn:hover,
-    .login-btn:hover {
+    .menu-btn:hover {
       border-color: orange;
       color: orange;
     }
@@ -110,14 +108,6 @@
       background: orange;
       color: black;
       border-color: orange;
-    }
-
-
-    .login-btn {
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
     }
 
     .menu-dropdown {
@@ -295,7 +285,7 @@
 
     .free-picks-layout {
       display: grid;
-      grid-template-columns: 360px 1fr;
+      grid-template-columns: 1fr 360px;
       gap: 22px;
       align-items: start;
     }
@@ -478,6 +468,154 @@
       font-size: 14px;
     }
 
+
+    .auth-dropdown {
+      position: relative;
+    }
+
+    .auth-panel {
+      position: absolute;
+      top: calc(100% + 12px);
+      right: 0;
+      width: 340px;
+      background: rgba(10,10,10,0.98);
+      border: 1px solid rgba(255,120,0,0.22);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+      display: none;
+      z-index: 120;
+    }
+
+    .auth-panel.show {
+      display: block;
+    }
+
+    .auth-panel h3 {
+      margin: 0 0 12px;
+      color: orange;
+      font-size: 20px;
+    }
+
+    .auth-panel input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,120,0,0.2);
+      background: rgba(255,255,255,0.08);
+      color: white;
+      margin-bottom: 10px;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .auth-message {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.35;
+      display: none;
+    }
+
+    .auth-message.show { display: block; }
+    .auth-message.success { background: rgba(0,180,80,0.14); color: #9dffc0; border: 1px solid rgba(0,180,80,0.22); }
+    .auth-message.error { background: rgba(255,80,80,0.14); color: #ffaaaa; border: 1px solid rgba(255,80,80,0.22); }
+    .auth-message.warning { background: rgba(255,190,80,0.14); color: #ffd77a; border: 1px solid rgba(255,190,80,0.22); }
+
+    .auth-small-link {
+      display: block;
+      margin-top: 12px;
+      color: orange;
+      font-weight: bold;
+      text-align: center;
+      text-decoration: underline;
+    }
+
+    .session-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.18);
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .premium-tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 18px 0 22px;
+    }
+
+    .premium-tab-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,120,0,0.28);
+      color: white;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .premium-tab-btn:hover,
+    .premium-tab-btn.active {
+      background: orange;
+      color: black;
+      border-color: orange;
+    }
+
+    .premium-table-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255,120,0,0.16);
+      background: rgba(0,0,0,0.18);
+    }
+
+    .premium-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+    }
+
+    .premium-table th,
+    .premium-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .premium-table th {
+      color: orange;
+      background: rgba(255,120,0,0.08);
+      white-space: nowrap;
+    }
+
+    .premium-table td {
+      color: #f0f0f0;
+    }
+
+    .premium-locked {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 22px;
+      color: #dedede;
+      line-height: 1.55;
+    }
+
+    .premium-locked strong {
+      color: orange;
+    }
+
     @media (max-width: 1080px) {
       .hero-grid,
       .two-col,
@@ -540,6 +678,12 @@
         left: 50%;
         transform: translateX(-50%);
       }
+
+      .auth-panel {
+        right: 50%;
+        transform: translateX(50%);
+        width: min(92vw, 340px);
+      }
     }
   </style>
 </head>
@@ -566,7 +710,6 @@
       </div>
 
       <div class="right-zone">
-        <a href="/premium" id="loginButton" class="login-btn">Iniciar sesión</a>
         <button id="btnEs" class="lang-btn active" type="button" onclick="setLanguage('es')">ES</button>
         <button id="btnEn" class="lang-btn" type="button" onclick="setLanguage('en')">EN</button>
       </div>
@@ -614,14 +757,14 @@
 
       <div class="card">
         <div class="free-picks-layout">
-          <div class="promo-video-box" id="freePicksPromoContainer">
-            <div class="muted" id="loadingFreePicksVideoText">Cargando video...</div>
-          </div>
-
           <div id="predictionList" class="picks-grid">
             <div class="pick-card">
               <div class="pick-line" id="loadingPicksText">Cargando picks...</div>
             </div>
+          </div>
+
+          <div class="promo-video-box" id="freePicksPromoContainer">
+            <div class="muted" id="loadingFreePicksVideoText">Cargando video...</div>
           </div>
         </div>
       </div>
@@ -674,6 +817,33 @@
             <li id="botFeature2">Herramientas y navegación centralizada.</li>
             <li id="botFeature3">Integración con contenido premium y deportivo.</li>
           </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="premium-section">
+      <div class="section-title">
+        <h2 id="premiumSectionTitle">🔥 Picks Premium</h2>
+      </div>
+      <div class="section-note" id="premiumSectionNote">
+        Inicia sesión para activar esta sección. Si tu membresía está activa, verás las tablas premium aquí mismo.
+      </div>
+
+      <div class="card" id="premiumGateBox">
+        <div class="premium-locked" id="premiumGateContent">
+          <strong>Acceso Premium.</strong><br>
+          Inicia sesión desde el botón superior. Si tu membresía está activa, las secciones premium aparecerán automáticamente debajo del Bot. Si aún no tienes membresía, puedes crear cuenta o actualizar desde la página Premium.
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
+            <button class="btn-main" type="button" onclick="openAuthFromPremium()" id="premiumLoginCta">Iniciar sesión</button>
+            <a class="btn-secondary" href="/premium" id="premiumUpgradeCta">Crear cuenta / Activar Premium</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="premiumTabsBox" style="display:none;">
+        <div class="premium-tabs" id="premiumTabs"></div>
+        <div id="premiumTableContainer" class="premium-table-wrap">
+          <div class="premium-locked">Cargando contenido premium...</div>
         </div>
       </div>
     </section>
@@ -738,7 +908,6 @@
         menuBot: "Bot",
         menuContact: "Contacto",
         menuPremium: "Premium",
-        loginButton: "Iniciar sesión",
 
         heroLine1: "Predicciones",
         heroLine2: "deportivas con",
@@ -801,7 +970,6 @@
         menuBot: "Bot",
         menuContact: "Contact",
         menuPremium: "Premium",
-        loginButton: "Login",
 
         heroLine1: "Sports",
         heroLine2: "predictions with",
@@ -875,6 +1043,12 @@
       if (!menu.contains(event.target) && !button.contains(event.target)) {
         closeMenu();
       }
+
+      const authPanel = document.getElementById("authPanel");
+      const authButton = document.getElementById("loginButton");
+      if (authPanel && authButton && !authPanel.contains(event.target) && !authButton.contains(event.target)) {
+        closeAuthPanel();
+      }
     });
 
     function setLanguage(lang) {
@@ -897,7 +1071,6 @@
       document.getElementById("menuBot").textContent = t("menuBot");
       document.getElementById("menuContact").textContent = t("menuContact");
       document.getElementById("menuPremium").textContent = t("menuPremium");
-      document.getElementById("loginButton").textContent = t("loginButton");
 
       document.getElementById("heroLine1").textContent = t("heroLine1");
       document.getElementById("heroLine2").textContent = t("heroLine2");
@@ -947,6 +1120,7 @@
 
       document.getElementById("btnEs").classList.toggle("active", currentLanguage === "es");
       document.getElementById("btnEn").classList.toggle("active", currentLanguage === "en");
+      updateLoginButton();
     }
 
     function escapeHtml(value) {
@@ -1147,7 +1321,247 @@
       }
     }
 
+
+
+    const premiumTabsConfig = [
+      { id: "general", label: "Partidos del día", endpoint: "/api/data/general" },
+      { id: "ultra", label: "Picks Ultrafiltradas", endpoint: "/api/data/ultra" },
+      { id: "stakes", label: "Control de banca", endpoint: "/api/data/stakes" },
+      { id: "combinadas", label: "Combinadas IA", endpoint: "/api/data/combinadas" },
+      { id: "goles", label: "Goles", endpoint: "/api/data/goles" },
+      { id: "top", label: "Top Valor Estadístico", endpoint: "/api/data/top" },
+      { id: "alta", label: "Equipos confiables", endpoint: "/api/data/alta-confianza" },
+      { id: "simples", label: "Picks Simples", endpoint: "/api/data/public" },
+      { id: "inferno", label: "Combinadas Inferno", endpoint: "/api/data/inferno" }
+    ];
+
+    function getToken() {
+      return localStorage.getItem("token") || "";
+    }
+
+    function getUserId() {
+      return localStorage.getItem("user_id") || "";
+    }
+
+    function getUserName() {
+      return localStorage.getItem("user_name") || "";
+    }
+
+    function saveUserSession(data) {
+      localStorage.setItem("token", data.token || "");
+      localStorage.setItem("user_id", data.user_id || "");
+      localStorage.setItem("user_name", data.name || "");
+      localStorage.setItem("user_email", data.email || "");
+    }
+
+    function setAuthMessage(message, type = "warning") {
+      const el = document.getElementById("authMessage");
+      el.textContent = message;
+      el.className = `auth-message show ${type}`;
+    }
+
+    function clearAuthMessage() {
+      const el = document.getElementById("authMessage");
+      el.textContent = "";
+      el.className = "auth-message";
+    }
+
+    function toggleAuthPanel() {
+      document.getElementById("authPanel").classList.toggle("show");
+    }
+
+    function closeAuthPanel() {
+      document.getElementById("authPanel").classList.remove("show");
+    }
+
+    function openAuthFromPremium() {
+      document.getElementById("authPanel").classList.add("show");
+      document.getElementById("authEmail").focus();
+    }
+
+    function updateLoginButton() {
+      const name = getUserName();
+      const token = getToken();
+      const button = document.getElementById("loginButton");
+      if (token && name) {
+        button.textContent = `Hola, ${name}`;
+      } else {
+        button.textContent = t("loginButton");
+      }
+    }
+
+    async function loginFromHome() {
+      clearAuthMessage();
+      const email = document.getElementById("authEmail").value.trim();
+      const password = document.getElementById("authPassword").value.trim();
+
+      if (!email || !password) {
+        setAuthMessage("Ingresa correo y contraseña.", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setAuthMessage(data.detail || "Error al iniciar sesión.", "error");
+          return;
+        }
+
+        saveUserSession(data);
+        updateLoginButton();
+        closeAuthPanel();
+
+        const status = await checkMembershipAndRenderPremium();
+
+        if (status === "active") {
+          document.getElementById("premium-section").scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          setTimeout(() => {
+            document.getElementById("free-picks").scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 100);
+        }
+      } catch (error) {
+        setAuthMessage("Error de conexión al iniciar sesión.", "error");
+      }
+    }
+
+    async function checkMembershipAndRenderPremium() {
+      const userId = getUserId();
+      const token = getToken();
+
+      if (!token || !userId) {
+        showPremiumLocked(false);
+        return "guest";
+      }
+
+      try {
+        const res = await fetch(`${API}/membership/${userId}`);
+        const data = await res.json();
+        const status = data.membership || "pending";
+
+        if (status === "active") {
+          document.getElementById("premiumGateBox").style.display = "none";
+          document.getElementById("premiumTabsBox").style.display = "block";
+          renderPremiumTabs();
+          await loadPremiumTab("general");
+        } else {
+          showPremiumLocked(true);
+        }
+
+        return status;
+      } catch (error) {
+        showPremiumLocked(true);
+        return "pending";
+      }
+    }
+
+    function showPremiumLocked(isLogged) {
+      document.getElementById("premiumGateBox").style.display = "block";
+      document.getElementById("premiumTabsBox").style.display = "none";
+      const message = isLogged
+        ? "Tu sesión está activa en versión gratuita. Para ver estas tablas, actualiza a Premium."
+        : "Inicia sesión desde el botón superior. Si tu membresía está activa, las secciones premium aparecerán automáticamente aquí.";
+      document.getElementById("premiumGateContent").innerHTML = `
+        <strong>Acceso Premium.</strong><br>
+        ${escapeHtml(message)}
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
+          <button class="btn-main" type="button" onclick="openAuthFromPremium()">${escapeHtml(t("premiumLoginCta"))}</button>
+          <a class="btn-secondary" href="/premium">${escapeHtml(t("premiumUpgradeCta"))}</a>
+        </div>
+      `;
+    }
+
+    function renderPremiumTabs() {
+      const container = document.getElementById("premiumTabs");
+      container.innerHTML = premiumTabsConfig.map(tab => `
+        <button class="premium-tab-btn" id="premiumTab_${tab.id}" type="button" onclick="loadPremiumTab('${tab.id}')">
+          ${escapeHtml(tab.label)}
+        </button>
+      `).join("");
+    }
+
+    async function loadPremiumTab(tabId) {
+      const tab = premiumTabsConfig.find(item => item.id === tabId) || premiumTabsConfig[0];
+      premiumTabsConfig.forEach(item => {
+        const btn = document.getElementById(`premiumTab_${item.id}`);
+        if (btn) btn.classList.toggle("active", item.id === tab.id);
+      });
+
+      const container = document.getElementById("premiumTableContainer");
+      container.innerHTML = `<div class="premium-locked">Cargando ${escapeHtml(tab.label)}...</div>`;
+
+      try {
+        const res = await fetch(`${API}${tab.endpoint}`);
+        const data = await res.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        renderPremiumTable(tab.label, items);
+      } catch (error) {
+        container.innerHTML = `<div class="premium-locked">Error cargando ${escapeHtml(tab.label)}.</div>`;
+      }
+    }
+
+    function renderPremiumTable(title, items) {
+      const container = document.getElementById("premiumTableContainer");
+
+      if (!items.length) {
+        container.innerHTML = `<div class="premium-locked">No hay datos disponibles en ${escapeHtml(title)}.</div>`;
+        return;
+      }
+
+      const preferredColumns = [
+        "hora", "Hora", "liga", "Liga", "sem", "Sem", "partido", "Partido", "ml", "ML", "ml_prob", "ML Probabilidad",
+        "goles_local", "Goles Local", "goles_visitante", "Goles Visitante", "marcador_global", "Marcador Global",
+        "mitades", "Mitades", "sot", "SoT", "corners", "Corners", "tarjetas", "Tarjetas",
+        "pick", "Pick", "prediccion_1", "Predicción 1", "prediccion_2", "Predicción 2", "stake", "Stake", "probabilidad", "Probabilidad"
+      ];
+
+      const allKeys = [];
+      items.forEach(item => Object.keys(item || {}).forEach(key => {
+        if (!allKeys.includes(key)) allKeys.push(key);
+      }));
+
+      let columns = preferredColumns.filter(key => allKeys.includes(key));
+      allKeys.forEach(key => {
+        if (!columns.includes(key)) columns.push(key);
+      });
+
+      columns = columns.filter(key => !String(key).endsWith("_en"));
+
+      const head = columns.map(col => `<th>${escapeHtml(formatColumnName(col))}</th>`).join("");
+      const rows = items.map(item => `
+        <tr>
+          ${columns.map(col => `<td>${escapeHtml(item[col] ?? "")}</td>`).join("")}
+        </tr>
+      `).join("");
+
+      container.innerHTML = `
+        <table class="premium-table">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function formatColumnName(key) {
+      const map = {
+        hora: "Hora", liga: "Liga", sem: "Sem", partido: "Partido", ml: "ML", ml_prob: "ML Probabilidad",
+        goles_local: "Goles Local", goles_visitante: "Goles Visitante", marcador_global: "Marcador Global",
+        mitades: "Mitades", sot: "SoT", corners: "Corners", tarjetas: "Tarjetas",
+        prediccion_1: "Predicción 1", prediccion_2: "Predicción 2", stake: "Stake", probabilidad: "Probabilidad"
+      };
+      return map[key] || String(key).replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+    }
+
     applyLanguage();
+    updateLoginButton();
+    checkMembershipAndRenderPremium();
     loadPublicPicks();
     loadFreePicksPromoVideo();
     loadVideoPick();
