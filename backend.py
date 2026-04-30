@@ -206,6 +206,20 @@ def init_db() -> None:
     """)
 
     cur.execute("""
+    CREATE TABLE IF NOT EXISTS telegram_memberships (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        telegram_id TEXT UNIQUE NOT NULL,
+        status TEXT NOT NULL DEFAULT 'inactive',
+        start_date TEXT,
+        end_date TEXT,
+        source TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """)
+
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS video_picks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         video_id TEXT UNIQUE NOT NULL,
@@ -314,6 +328,14 @@ class ExpireMembershipIn(BaseModel):
 
 class DeleteUserIn(BaseModel):
     user_id: str
+
+class TelegramMembershipIn(BaseModel):
+    telegram_id: str
+    days: int = 30
+    notes: Optional[str] = None
+
+class TelegramExpireIn(BaseModel):
+    telegram_id: str
 
 # =========================
 # AUTH HELPERS
@@ -434,6 +456,144 @@ def activate_membership_for_user(user_id: str, days: int, note: str = "") -> dic
         "membership_start": new_start,
         "membership_end": new_end,
         "note": note,
+    }
+
+def normalize_telegram_membership_status(end_date: Optional[str], status: str = "inactive") -> str:
+    if status != "active":
+        return status or "inactive"
+    dt = parse_dt(end_date)
+    if not dt:
+        return "inactive"
+    return "active" if dt > now_utc() else "expired"
+
+def activate_telegram_membership(
+    telegram_id: str,
+    days: int = PREMIUM_DAYS,
+    source: str = "admin",
+    notes: str = ""
+) -> dict[str, Any]:
+    clean_id = str(telegram_id).strip()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="telegram_id requerido.")
+    if days <= 0:
+        raise HTTPException(status_code=400, detail="days debe ser mayor a 0.")
+
+    conn = db_connect()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM telegram_memberships WHERE telegram_id = ?", (clean_id,))
+    row = cur.fetchone()
+
+    base_dt = now_utc()
+    if row:
+        current_end = parse_dt(row["end_date"])
+        if current_end and current_end > base_dt:
+            base_dt = current_end
+
+    start_date = row["start_date"] if row and row["start_date"] else iso_now()
+    end_date = (base_dt + timedelta(days=days)).isoformat()
+    now_str = iso_now()
+
+    if row:
+        cur.execute("""
+        UPDATE telegram_memberships
+        SET status = 'active',
+            start_date = ?,
+            end_date = ?,
+            source = ?,
+            notes = ?,
+            updated_at = ?
+        WHERE telegram_id = ?
+        """, (start_date, end_date, source, notes, now_str, clean_id))
+    else:
+        cur.execute("""
+        INSERT INTO telegram_memberships (
+            telegram_id, status, start_date, end_date, source, notes, created_at, updated_at
+        )
+        VALUES (?, 'active', ?, ?, ?, ?, ?, ?)
+        """, (clean_id, start_date, end_date, source, notes, now_str, now_str))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "telegram_id": clean_id,
+        "status": "active",
+        "start_date": start_date,
+        "end_date": end_date,
+        "days": days,
+        "source": source,
+        "notes": notes,
+    }
+
+def expire_telegram_membership(telegram_id: str, source: str = "admin") -> dict[str, Any]:
+    clean_id = str(telegram_id).strip()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="telegram_id requerido.")
+
+    now_str = iso_now()
+    expired_dt = (now_utc() - timedelta(minutes=1)).isoformat()
+
+    conn = db_connect()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM telegram_memberships WHERE telegram_id = ?", (clean_id,))
+    row = cur.fetchone()
+
+    if row:
+        cur.execute("""
+        UPDATE telegram_memberships
+        SET status = 'expired',
+            end_date = ?,
+            source = ?,
+            updated_at = ?
+        WHERE telegram_id = ?
+        """, (expired_dt, source, now_str, clean_id))
+    else:
+        cur.execute("""
+        INSERT INTO telegram_memberships (
+            telegram_id, status, start_date, end_date, source, notes, created_at, updated_at
+        )
+        VALUES (?, 'expired', ?, ?, ?, ?, ?, ?)
+        """, (clean_id, None, expired_dt, source, "Expirada manualmente", now_str, now_str))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "telegram_id": clean_id,
+        "status": "expired",
+        "end_date": expired_dt,
+        "source": source,
+    }
+
+def get_telegram_membership_record(telegram_id: str) -> dict[str, Any]:
+    clean_id = str(telegram_id).strip()
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM telegram_memberships WHERE telegram_id = ?", (clean_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return {
+            "telegram_id": clean_id,
+            "status": "inactive",
+            "membership": "inactive",
+            "start_date": None,
+            "end_date": None,
+        }
+
+    item = dict(row)
+    membership = normalize_telegram_membership_status(item.get("end_date"), item.get("status", "inactive"))
+    return {
+        "telegram_id": item["telegram_id"],
+        "status": membership,
+        "membership": membership,
+        "start_date": item.get("start_date"),
+        "end_date": item.get("end_date"),
+        "source": item.get("source"),
+        "notes": item.get("notes"),
     }
 
 def save_paypal_payment(
@@ -721,6 +881,76 @@ async def upload_proof(user_id: str, file: UploadFile = File(...)):
         "request_id": request_id,
         "proof_url": proof_url
     }
+
+# =========================
+# TELEGRAM BOT MEMBERSHIPS
+# =========================
+
+@app.get("/bot/membership/{telegram_id}")
+def bot_get_membership(telegram_id: str):
+    return get_telegram_membership_record(telegram_id)
+
+@app.post("/admin/bot/activate-membership")
+def admin_activate_bot_membership(payload: TelegramMembershipIn, admin=Depends(require_admin)):
+    if payload.days not in {7, 15, 30, 60, 90}:
+        raise HTTPException(status_code=400, detail="Solo se permiten 7, 15, 30, 60 o 90 días.")
+
+    membership = activate_telegram_membership(
+        telegram_id=payload.telegram_id,
+        days=payload.days,
+        source=f"admin:{admin['user_id']}",
+        notes=payload.notes or "Activación manual desde admin/backend"
+    )
+
+    write_admin_log(
+        admin_user_id=admin["user_id"],
+        action="activate_telegram_membership",
+        target_user_id=payload.telegram_id,
+        details=f"{payload.days} días"
+    )
+
+    return {
+        "status": "ok",
+        "message": "Membresía Telegram activada correctamente.",
+        "membership": membership,
+    }
+
+@app.post("/admin/bot/expire-membership")
+def admin_expire_bot_membership(payload: TelegramExpireIn, admin=Depends(require_admin)):
+    membership = expire_telegram_membership(
+        telegram_id=payload.telegram_id,
+        source=f"admin:{admin['user_id']}"
+    )
+
+    write_admin_log(
+        admin_user_id=admin["user_id"],
+        action="expire_telegram_membership",
+        target_user_id=payload.telegram_id,
+        details="Expirada manualmente"
+    )
+
+    return {
+        "status": "ok",
+        "message": "Membresía Telegram expirada correctamente.",
+        "membership": membership,
+    }
+
+@app.get("/admin/bot/memberships")
+def admin_list_bot_memberships(admin=Depends(require_admin)):
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+    SELECT telegram_id, status, start_date, end_date, source, notes, created_at, updated_at
+    FROM telegram_memberships
+    ORDER BY datetime(updated_at) DESC
+    """)
+    rows = []
+    for row in cur.fetchall():
+        item = dict(row)
+        item["membership_status"] = normalize_telegram_membership_status(item.get("end_date"), item.get("status", "inactive"))
+        rows.append(item)
+    conn.close()
+    return {"items": rows}
 
 # =========================
 # PAYPAL PUBLIC ENDPOINTS
@@ -1670,6 +1900,7 @@ def health():
         "paypal_api_base_present": bool(PAYPAL_API_BASE),
         "paypal_client_id_len": len(PAYPAL_CLIENT_ID or ""),
         "paypal_client_secret_len": len(PAYPAL_CLIENT_SECRET or ""),
+        "telegram_memberships_enabled": True,
     }
 
 # =========================
