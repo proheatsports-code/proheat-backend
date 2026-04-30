@@ -55,6 +55,9 @@ BOT_PAYMENT_BANK = os.getenv("BOT_PAYMENT_BANK", "Banco por configurar")
 BOT_PAYMENT_ACCOUNT_NAME = os.getenv("BOT_PAYMENT_ACCOUNT_NAME", "ProHeat Sports")
 BOT_RETURN_URL_BASE = os.getenv("BOT_RETURN_URL_BASE", "").strip().rstrip("/")
 
+# Telegram bot notifications
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", os.getenv("TELEGRAM_TOKEN", "")).strip()
+
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -434,6 +437,34 @@ def write_admin_log(admin_user_id: str, action: str, target_user_id: Optional[st
     """, (admin_user_id, action, target_user_id, details, iso_now()))
     conn.commit()
     conn.close()
+
+def notify_telegram_user(telegram_id: str, text: str) -> bool:
+    """Envía notificación al usuario del bot sin romper el flujo si Telegram falla."""
+    if not TELEGRAM_BOT_TOKEN:
+        return False
+
+    clean_id = str(telegram_id).strip()
+    if not clean_id:
+        return False
+
+    try:
+        response = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+            json={
+                "chat_id": clean_id,
+                "text": text,
+                "parse_mode": "HTML",
+                "disable_web_page_preview": True,
+            },
+            timeout=15,
+        )
+        if response.status_code not in (200, 201):
+            print(f"Telegram notify failed for {clean_id}: {response.text}")
+            return False
+        return True
+    except Exception as e:
+        print(f"Telegram notify exception for {clean_id}: {e}")
+        return False
 
 # =========================
 # PAYPAL HELPERS
@@ -1063,10 +1094,21 @@ def admin_activate_bot_membership(payload: TelegramMembershipIn, admin=Depends(r
         details=f"{payload.days} días"
     )
 
+    notified = notify_telegram_user(
+        payload.telegram_id,
+        (
+            "✅ <b>ProHeat Sports Premium activado</b>\n\n"
+            f"Tu acceso al bot fue activado por {payload.days} días.\n"
+            f"Vigencia hasta: {membership.get('end_date', 'N/A')}\n\n"
+            "Escribe /start para entrar al menú premium."
+        )
+    )
+
     return {
         "status": "ok",
         "message": "Membresía Telegram activada correctamente.",
         "membership": membership,
+        "telegram_notified": notified,
     }
 
 @app.post("/admin/bot/expire-membership")
@@ -1083,10 +1125,20 @@ def admin_expire_bot_membership(payload: TelegramExpireIn, admin=Depends(require
         details="Expirada manualmente"
     )
 
+    notified = notify_telegram_user(
+        payload.telegram_id,
+        (
+            "🔒 <b>Acceso ProHeat Sports vencido</b>\n\n"
+            "Tu membresía del bot fue marcada como vencida por administración.\n"
+            "Si deseas renovar, abre el enlace de pago desde el bot o envía tu comprobante."
+        )
+    )
+
     return {
         "status": "ok",
         "message": "Membresía Telegram expirada correctamente.",
         "membership": membership,
+        "telegram_notified": notified,
     }
 
 @app.get("/admin/bot/memberships")
@@ -1182,7 +1234,16 @@ def bot_paypal_capture_order(order_id: str, telegram_id: str):
     if status == "COMPLETED":
         membership = activate_telegram_membership(clean_id, BOT_PREMIUM_DAYS, "paypal_bot", f"PayPal bot order {order_id} capture {capture_id}")
         write_admin_log("paypal_bot_auto", "paypal_bot_auto_approve", clean_id, f"order_id={order_id} capture_id={capture_id} amount={BOT_PREMIUM_PRICE_MXN} MXN")
-        return {"status": "ok", "message": "Pago completado y membresía Telegram activada automáticamente.", "paypal_status": status, "order_id": order_id, "capture_id": capture_id, "membership": membership}
+        notified = notify_telegram_user(
+            clean_id,
+            (
+                "✅ <b>Pago recibido</b>\n\n"
+                f"Tu acceso ProHeat Sports Bot Premium quedó activado por {BOT_PREMIUM_DAYS} días.\n"
+                f"Vigencia hasta: {membership.get('end_date', 'N/A')}\n\n"
+                "Escribe /start para entrar al menú premium."
+            )
+        )
+        return {"status": "ok", "message": "Pago completado y membresía Telegram activada automáticamente.", "paypal_status": status, "order_id": order_id, "capture_id": capture_id, "membership": membership, "telegram_notified": notified}
     return {"status": "pending", "message": "La orden fue capturada pero no quedó completada.", "paypal_status": status, "order_id": order_id, "capture_id": capture_id}
 
 @app.get("/bot/pay/success", response_class=HTMLResponse)
@@ -1241,7 +1302,16 @@ def admin_bot_approve_payment_request(request_id: str, days: int = BOT_PREMIUM_D
     conn.close()
     membership = activate_telegram_membership(row["telegram_id"], days, f"admin_payment:{admin['user_id']}", f"Aprobación manual de comprobante {request_id}")
     write_admin_log(admin["user_id"], "approve_telegram_payment_request", row["telegram_id"], f"request_id={request_id} days={days}")
-    return {"status": "ok", "message": "Comprobante aprobado y acceso Telegram activado.", "membership": membership}
+    notified = notify_telegram_user(
+        row["telegram_id"],
+        (
+            "✅ <b>Comprobante aprobado</b>\n\n"
+            f"Tu acceso ProHeat Sports Bot Premium fue activado por {days} días.\n"
+            f"Vigencia hasta: {membership.get('end_date', 'N/A')}\n\n"
+            "Escribe /start para entrar al menú premium."
+        )
+    )
+    return {"status": "ok", "message": "Comprobante aprobado y acceso Telegram activado.", "membership": membership, "telegram_notified": notified}
 
 # =========================
 # PAYPAL PUBLIC ENDPOINTS
@@ -2221,6 +2291,7 @@ def health():
         "bot_premium_price_mxn": BOT_PREMIUM_PRICE_MXN,
         "bot_premium_days": BOT_PREMIUM_DAYS,
         "bot_payment_clabe_configured": bool(BOT_PAYMENT_CLABE and not BOT_PAYMENT_CLABE.startswith("CONFIGURA_")),
+        "telegram_bot_notifications_enabled": bool(TELEGRAM_BOT_TOKEN),
     }
 
 # =========================
