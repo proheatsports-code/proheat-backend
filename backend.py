@@ -14,7 +14,7 @@ import requests
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from pydantic import BaseModel, EmailStr
 
 from test_excel_reader_daily import process_excel_to_json
@@ -46,6 +46,14 @@ PAYPAL_WEBHOOK_ID = os.getenv("PAYPAL_WEBHOOK_ID", "")
 PAYPAL_API_BASE = os.getenv("PAYPAL_API_BASE", "https://api-m.paypal.com")
 PREMIUM_PRICE_MXN = os.getenv("PREMIUM_PRICE_MXN", "110.00")
 PREMIUM_DAYS = int(os.getenv("PREMIUM_DAYS", "30"))
+
+# Telegram Bot Premium
+BOT_PREMIUM_PRICE_MXN = os.getenv("BOT_PREMIUM_PRICE_MXN", "160.00")
+BOT_PREMIUM_DAYS = int(os.getenv("BOT_PREMIUM_DAYS", "30"))
+BOT_PAYMENT_CLABE = os.getenv("BOT_PAYMENT_CLABE", "CONFIGURA_BOT_PAYMENT_CLABE_EN_RAILWAY")
+BOT_PAYMENT_BANK = os.getenv("BOT_PAYMENT_BANK", "Banco por configurar")
+BOT_PAYMENT_ACCOUNT_NAME = os.getenv("BOT_PAYMENT_ACCOUNT_NAME", "ProHeat Sports")
+BOT_RETURN_URL_BASE = os.getenv("BOT_RETURN_URL_BASE", "").strip().rstrip("/")
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -214,6 +222,36 @@ def init_db() -> None:
         end_date TEXT,
         source TEXT,
         notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS telegram_payment_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        request_id TEXT UNIQUE NOT NULL,
+        telegram_id TEXT NOT NULL,
+        proof_filename TEXT,
+        proof_url TEXT,
+        notes TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS telegram_paypal_payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        payment_id TEXT UNIQUE NOT NULL,
+        telegram_id TEXT NOT NULL,
+        paypal_order_id TEXT UNIQUE,
+        paypal_capture_id TEXT,
+        amount TEXT NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'MXN',
+        status TEXT NOT NULL,
+        raw_payload TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     )
@@ -596,6 +634,122 @@ def get_telegram_membership_record(telegram_id: str) -> dict[str, Any]:
         "notes": item.get("notes"),
     }
 
+
+def get_public_base_url(request: Request) -> str:
+    if BOT_RETURN_URL_BASE:
+        return BOT_RETURN_URL_BASE
+    return str(request.base_url).rstrip("/")
+
+def save_telegram_paypal_payment(
+    telegram_id: str,
+    order_id: str = "",
+    capture_id: str = "",
+    amount: str = "160.00",
+    currency: str = "MXN",
+    status: str = "created",
+    raw_payload: dict[str, Any] | None = None,
+) -> str:
+    conn = db_connect()
+    cur = conn.cursor()
+    payment_id = f"tpp_{secrets.token_hex(8)}"
+    now_str = iso_now()
+    cur.execute("""
+    INSERT INTO telegram_paypal_payments (
+        payment_id, telegram_id, paypal_order_id, paypal_capture_id,
+        amount, currency, status, raw_payload, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        payment_id, str(telegram_id).strip(), order_id, capture_id,
+        amount, currency, status, json.dumps(raw_payload or {}, ensure_ascii=False), now_str, now_str
+    ))
+    conn.commit()
+    conn.close()
+    return payment_id
+
+def update_telegram_paypal_payment_status(
+    order_id: str,
+    capture_id: str = "",
+    status: str = "completed",
+    raw_payload: dict[str, Any] | None = None,
+) -> Optional[str]:
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("SELECT telegram_id FROM telegram_paypal_payments WHERE paypal_order_id = ?", (order_id,))
+    row = cur.fetchone()
+    telegram_id = row["telegram_id"] if row else None
+    cur.execute("""
+    UPDATE telegram_paypal_payments
+    SET paypal_capture_id = COALESCE(?, paypal_capture_id),
+        status = ?, raw_payload = ?, updated_at = ?
+    WHERE paypal_order_id = ?
+    """, (capture_id or None, status, json.dumps(raw_payload or {}, ensure_ascii=False), iso_now(), order_id))
+    conn.commit()
+    conn.close()
+    return telegram_id
+
+def build_bot_payment_page_html(telegram_id: str, base_url: str) -> str:
+    safe_tid = str(telegram_id).strip()
+    return """<!DOCTYPE html>
+<html lang='es'>
+<head>
+<meta charset='UTF-8' />
+<meta name='viewport' content='width=device-width, initial-scale=1.0' />
+<title>ProHeat Sports Bot Premium</title>
+<style>
+body { margin:0; font-family:Arial,Helvetica,sans-serif; background:#000; color:#fff; }
+.wrap { max-width:860px; margin:0 auto; padding:28px 18px; }
+.card { background:rgba(255,255,255,.04); border:1px solid rgba(255,140,0,.25); border-radius:22px; padding:22px; margin:16px 0; }
+h1,h2 { color:orange; margin-top:0; }
+.price { font-size:34px; font-weight:900; color:orange; }
+.muted { color:#cfcfcf; line-height:1.5; }
+.field { background:#111; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; margin:8px 0; word-break:break-word; }
+button { background:orange; color:#000; border:0; border-radius:999px; padding:12px 18px; font-weight:800; cursor:pointer; }
+input { width:100%; padding:12px; border-radius:12px; border:1px solid rgba(255,140,0,.25); background:#111; color:#fff; margin:8px 0; }
+.msg { margin-top:12px; color:#ffbf66; white-space:pre-wrap; }
+</style>
+<script src='https://www.paypal.com/sdk/js?client-id=""" + PAYPAL_CLIENT_ID + """&currency=MXN'></script>
+</head>
+<body>
+<div class='wrap'>
+<div class='card'><h1>🔥 ProHeat Sports Bot Premium</h1><div class='muted'>Telegram ID: <strong>""" + safe_tid + """</strong></div><div class='price'>$""" + BOT_PREMIUM_PRICE_MXN + """ MXN</div><div class='muted'>Acceso premium por """ + str(BOT_PREMIUM_DAYS) + """ días.</div></div>
+<div class='card'><h2>💳 Pagar con PayPal</h2><div id='paypal-button-container'></div><div id='paypalMsg' class='msg'></div></div>
+<div class='card'><h2>🏦 Transferencia bancaria</h2><div class='field'><strong>Banco:</strong><br>""" + BOT_PAYMENT_BANK + """</div><div class='field'><strong>Nombre:</strong><br>""" + BOT_PAYMENT_ACCOUNT_NAME + """</div><div class='field'><strong>CLABE:</strong><br>""" + BOT_PAYMENT_CLABE + """</div><div class='field'><strong>Monto:</strong><br>$""" + BOT_PREMIUM_PRICE_MXN + """ MXN</div><p class='muted'>Después de transferir, sube tu comprobante aquí. Un administrador lo validará.</p><form id='proofForm'><input type='file' id='proofFile' accept='image/*,.pdf' required /><button type='submit'>Subir comprobante</button></form><div id='proofMsg' class='msg'></div></div>
+</div>
+<script>
+const telegramId = '""" + safe_tid + """';
+const baseUrl = '""" + base_url + """';
+if (window.paypal) {
+  paypal.Buttons({
+    createOrder: async function() {
+      const res = await fetch(baseUrl + '/bot/paypal/create-order/' + encodeURIComponent(telegramId), { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Error creando orden PayPal');
+      return data.id;
+    },
+    onApprove: async function(data) {
+      document.getElementById('paypalMsg').textContent = 'Confirmando pago...';
+      const res = await fetch(baseUrl + '/bot/paypal/capture-order/' + encodeURIComponent(data.orderID) + '?telegram_id=' + encodeURIComponent(telegramId), { method: 'POST' });
+      const payload = await res.json();
+      document.getElementById('paypalMsg').textContent = res.ok ? '✅ Pago completado. Tu acceso quedó activado. Regresa al bot y usa /start.' : (payload.detail || 'No se pudo confirmar el pago.');
+    },
+    onError: function(err) { document.getElementById('paypalMsg').textContent = 'Error PayPal: ' + err; }
+  }).render('#paypal-button-container');
+} else { document.getElementById('paypalMsg').textContent = 'PayPal no está configurado o no pudo cargar.'; }
+document.getElementById('proofForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const file = document.getElementById('proofFile').files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  document.getElementById('proofMsg').textContent = 'Subiendo comprobante...';
+  const res = await fetch(baseUrl + '/bot/upload-proof/' + encodeURIComponent(telegramId), { method: 'POST', body: fd });
+  const data = await res.json();
+  document.getElementById('proofMsg').textContent = res.ok ? '✅ Comprobante enviado. Queda pendiente de revisión.' : (data.detail || 'Error subiendo comprobante.');
+});
+</script>
+</body></html>"""
+
 def save_paypal_payment(
     user_id: str,
     order_id: str = "",
@@ -952,6 +1106,143 @@ def admin_list_bot_memberships(admin=Depends(require_admin)):
     conn.close()
     return {"items": rows}
 
+
+# =========================
+# TELEGRAM BOT PAYMENTS
+# =========================
+
+@app.get("/bot/pay", response_class=HTMLResponse)
+def bot_payment_page(request: Request, telegram_id: str):
+    clean_id = str(telegram_id).strip()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="telegram_id requerido.")
+    base_url = get_public_base_url(request)
+    return HTMLResponse(build_bot_payment_page_html(clean_id, base_url))
+
+@app.post("/bot/paypal/create-order/{telegram_id}")
+def bot_paypal_create_order(telegram_id: str, request: Request):
+    clean_id = str(telegram_id).strip()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="telegram_id requerido.")
+    access_token = paypal_get_access_token()
+    base_url = get_public_base_url(request)
+    payload = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
+            "reference_id": f"telegram:{clean_id}",
+            "custom_id": f"telegram:{clean_id}",
+            "description": f"ProHeat Sports Bot Premium {BOT_PREMIUM_DAYS} días",
+            "amount": {"currency_code": "MXN", "value": BOT_PREMIUM_PRICE_MXN}
+        }],
+        "application_context": {
+            "brand_name": "ProHeat Sports",
+            "user_action": "PAY_NOW",
+            "shipping_preference": "NO_SHIPPING",
+            "return_url": f"{base_url}/bot/pay/success?telegram_id={clean_id}",
+            "cancel_url": f"{base_url}/bot/pay?telegram_id={clean_id}"
+        }
+    }
+    response = requests.post(
+        f"{PAYPAL_API_BASE}/v2/checkout/orders",
+        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+        json=payload,
+        timeout=30,
+    )
+    if response.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail=f"Error creando orden PayPal Bot: {response.text}")
+    data = response.json()
+    order_id = data.get("id", "")
+    save_telegram_paypal_payment(clean_id, order_id, amount=BOT_PREMIUM_PRICE_MXN, currency="MXN", status="created", raw_payload=data)
+    return data
+
+@app.post("/bot/paypal/capture-order/{order_id}")
+def bot_paypal_capture_order(order_id: str, telegram_id: str):
+    clean_id = str(telegram_id).strip()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="telegram_id requerido.")
+    access_token = paypal_get_access_token()
+    response = requests.post(
+        f"{PAYPAL_API_BASE}/v2/checkout/orders/{order_id}/capture",
+        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+        timeout=30,
+    )
+    if response.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail=f"Error capturando orden PayPal Bot: {response.text}")
+    data = response.json()
+    status = data.get("status", "")
+    capture_id = ""
+    purchase_units = data.get("purchase_units", [])
+    if purchase_units:
+        captures = purchase_units[0].get("payments", {}).get("captures", [])
+        if captures:
+            capture_id = captures[0].get("id", "")
+    stored_telegram_id = update_telegram_paypal_payment_status(order_id, capture_id, status=(status.lower() or "completed"), raw_payload=data)
+    if stored_telegram_id and stored_telegram_id != clean_id:
+        raise HTTPException(status_code=400, detail="La orden no corresponde a este Telegram ID.")
+    if status == "COMPLETED":
+        membership = activate_telegram_membership(clean_id, BOT_PREMIUM_DAYS, "paypal_bot", f"PayPal bot order {order_id} capture {capture_id}")
+        write_admin_log("paypal_bot_auto", "paypal_bot_auto_approve", clean_id, f"order_id={order_id} capture_id={capture_id} amount={BOT_PREMIUM_PRICE_MXN} MXN")
+        return {"status": "ok", "message": "Pago completado y membresía Telegram activada automáticamente.", "paypal_status": status, "order_id": order_id, "capture_id": capture_id, "membership": membership}
+    return {"status": "pending", "message": "La orden fue capturada pero no quedó completada.", "paypal_status": status, "order_id": order_id, "capture_id": capture_id}
+
+@app.get("/bot/pay/success", response_class=HTMLResponse)
+def bot_pay_success(telegram_id: str):
+    return HTMLResponse(f"<html><body style='background:#000;color:#fff;font-family:Arial;padding:30px;'><h1 style='color:orange;'>✅ Pago recibido</h1><p>Telegram ID: <strong>{telegram_id}</strong></p><p>Regresa al bot de ProHeat Sports y escribe <strong>/start</strong>.</p></body></html>")
+
+@app.post("/bot/upload-proof/{telegram_id}")
+async def bot_upload_proof(telegram_id: str, file: UploadFile = File(...)):
+    clean_id = str(telegram_id).strip()
+    if not clean_id:
+        raise HTTPException(status_code=400, detail="telegram_id requerido.")
+    suffix = Path(file.filename or "proof.bin").suffix or ".bin"
+    stored_name = f"telegram_{clean_id}_{secrets.token_hex(8)}{suffix}"
+    save_path = UPLOADS_DIR / stored_name
+    with open(save_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    request_id = f"treq_{secrets.token_hex(6)}"
+    proof_url = f"/proofs/{stored_name}"
+    now_str = iso_now()
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+    INSERT INTO telegram_payment_requests (request_id, telegram_id, proof_filename, proof_url, notes, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (request_id, clean_id, file.filename or stored_name, proof_url, f"Comprobante Telegram Bot por ${BOT_PREMIUM_PRICE_MXN} MXN", "pending", now_str, now_str))
+    conn.commit()
+    conn.close()
+    return {"message": "Comprobante del bot enviado correctamente. Quedó pendiente de revisión.", "request_id": request_id, "telegram_id": clean_id, "proof_url": proof_url}
+
+@app.get("/admin/bot/payment-requests")
+def admin_bot_payment_requests(admin=Depends(require_admin)):
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("""
+    SELECT request_id, telegram_id, proof_filename, proof_url, notes, status, created_at, updated_at
+    FROM telegram_payment_requests
+    ORDER BY datetime(created_at) DESC
+    """)
+    items = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return {"items": items}
+
+@app.post("/admin/bot/approve-payment-request/{request_id}")
+def admin_bot_approve_payment_request(request_id: str, days: int = BOT_PREMIUM_DAYS, admin=Depends(require_admin)):
+    conn = db_connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM telegram_payment_requests WHERE request_id = ?", (request_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Solicitud Telegram no encontrada.")
+    now_str = iso_now()
+    cur.execute("UPDATE telegram_payment_requests SET status = 'reviewed', updated_at = ? WHERE request_id = ?", (now_str, request_id))
+    conn.commit()
+    conn.close()
+    membership = activate_telegram_membership(row["telegram_id"], days, f"admin_payment:{admin['user_id']}", f"Aprobación manual de comprobante {request_id}")
+    write_admin_log(admin["user_id"], "approve_telegram_payment_request", row["telegram_id"], f"request_id={request_id} days={days}")
+    return {"status": "ok", "message": "Comprobante aprobado y acceso Telegram activado.", "membership": membership}
+
 # =========================
 # PAYPAL PUBLIC ENDPOINTS
 # =========================
@@ -1122,6 +1413,32 @@ async def paypal_webhook(request: Request):
                     target_user_id=payment_row["user_id"],
                     details=f"order_id={order_id} capture_id={capture_id} amount={amount} {currency}"
                 )
+            else:
+                conn = db_connect()
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM telegram_paypal_payments WHERE paypal_order_id = ?", (order_id,))
+                telegram_payment_row = cur.fetchone()
+                conn.close()
+
+                if telegram_payment_row and telegram_payment_row["status"] != "completed":
+                    update_telegram_paypal_payment_status(
+                        order_id=order_id,
+                        capture_id=capture_id,
+                        status="completed",
+                        raw_payload=body,
+                    )
+                    activate_telegram_membership(
+                        telegram_id=telegram_payment_row["telegram_id"],
+                        days=BOT_PREMIUM_DAYS,
+                        source="paypal_bot_webhook",
+                        notes=f"Webhook PayPal Bot order {order_id}"
+                    )
+                    write_admin_log(
+                        admin_user_id="paypal_bot_webhook",
+                        action="paypal_bot_webhook_auto_approve",
+                        target_user_id=telegram_payment_row["telegram_id"],
+                        details=f"order_id={order_id} capture_id={capture_id} amount={amount} {currency}"
+                    )
 
     return {"status": "ok"}
 
@@ -1901,6 +2218,9 @@ def health():
         "paypal_client_id_len": len(PAYPAL_CLIENT_ID or ""),
         "paypal_client_secret_len": len(PAYPAL_CLIENT_SECRET or ""),
         "telegram_memberships_enabled": True,
+        "bot_premium_price_mxn": BOT_PREMIUM_PRICE_MXN,
+        "bot_premium_days": BOT_PREMIUM_DAYS,
+        "bot_payment_clabe_configured": bool(BOT_PAYMENT_CLABE and not BOT_PAYMENT_CLABE.startswith("CONFIGURA_")),
     }
 
 # =========================
