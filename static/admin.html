@@ -448,6 +448,7 @@
             <button class="btn btn-secondary" onclick="loadPendingRequests()">Solicitudes</button>
             <button class="btn btn-secondary" onclick="loadUsers()">Usuarios</button>
             <button class="btn btn-secondary" onclick="loadBotUsers()">Usuarios Bot</button>
+            <button class="btn btn-secondary" onclick="loadBotPaymentRequests()">Comprobantes Bot</button>
             <button class="btn btn-secondary" onclick="loadAdmins()">Admins</button>
             <button class="btn btn-secondary" onclick="loadVideoPicks()">VideoPicks</button>
             <button class="btn btn-secondary" onclick="loadFreePicksVideo()">Video lateral picks</button>
@@ -996,6 +997,96 @@
       } catch (error) {
         setTable("Usuarios Bot", `<div class="summary-box">Error de conexión: ${escapeHtml(error)}</div>`);
       }
+    }
+
+
+    async function loadBotPaymentRequests() {
+      try {
+        const response = await fetch(`${API_BASE}/admin/bot/payment-requests`, {
+          headers: getAdminHeaders(false)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          setTable("Comprobantes Bot", `<div class="summary-box">${escapeHtml(data.detail || "No se pudieron cargar los comprobantes del bot.")}</div>`);
+          return;
+        }
+
+        const items = data.items || [];
+        if (!items.length) {
+          setTable("Comprobantes Bot", `<div class="summary-box">No hay comprobantes del bot registrados.</div>`);
+          return;
+        }
+
+        let html = `<table><thead><tr>
+          <th>Request ID</th><th>Telegram ID</th><th>Archivo</th><th>Notas</th><th>Estado</th><th>Creado</th><th>Actualizado</th><th>Acciones</th>
+        </tr></thead><tbody>`;
+
+        items.forEach(item => {
+          html += `
+            <tr>
+              <td>${escapeHtml(item.request_id)}</td>
+              <td>${escapeHtml(item.telegram_id)}</td>
+              <td>
+                ${escapeHtml(item.proof_filename || "")}
+                ${item.proof_url ? `<br><a href="${API_BASE}${item.proof_url}" target="_blank" style="color:orange;">Ver comprobante</a>` : ""}
+              </td>
+              <td>${escapeHtml(item.notes || "")}</td>
+              <td>${statusPill(item.status)}</td>
+              <td>${escapeHtml(item.created_at || "")}</td>
+              <td>${escapeHtml(item.updated_at || "")}</td>
+              <td>
+                <div class="action-group">
+                  <button class="btn btn-secondary" onclick="setTargetTelegramId('${escapeHtml(item.telegram_id)}')">Usar ID</button>
+                  <select class="action-select" onchange="approveBotPaymentFromDropdown('${escapeHtml(item.request_id)}', this)">
+                    <option value="">Aprobar...</option>
+                    <option value="7">7 días</option>
+                    <option value="15">15 días</option>
+                    <option value="30">30 días</option>
+                    <option value="60">60 días</option>
+                    <option value="90">90 días</option>
+                  </select>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += `</tbody></table>`;
+        setTable("Comprobantes Bot", html);
+      } catch (error) {
+        setTable("Comprobantes Bot", `<div class="summary-box">Error de conexión: ${escapeHtml(error)}</div>`);
+      }
+    }
+
+    async function approveBotPaymentRequest(requestId, days) {
+      if (!requestId || !days) return;
+      if (!confirm(`¿Aprobar comprobante Bot ${requestId} por ${days} días?`)) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/bot/approve-payment-request/${encodeURIComponent(requestId)}?days=${encodeURIComponent(days)}`, {
+          method: "POST",
+          headers: getAdminHeaders(false)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("actionMessage", data.detail || "No se pudo aprobar el comprobante del bot.", "error");
+          return;
+        }
+
+        showMessage("actionMessage", data.message || `Comprobante Bot aprobado: ${requestId}`, "success");
+        loadBotPaymentRequests();
+      } catch (error) {
+        showMessage("actionMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
+    function approveBotPaymentFromDropdown(requestId, selectEl) {
+      const days = Number(selectEl.value);
+      if (!days) return;
+      approveBotPaymentRequest(requestId, days);
+      selectEl.value = "";
     }
 
     async function loadAdmins() {
