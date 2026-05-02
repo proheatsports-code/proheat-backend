@@ -6,6 +6,7 @@ import sqlite3
 import secrets
 import hashlib
 import base64
+import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Any
@@ -2136,10 +2137,37 @@ async def admin_upload_excel(
 
         result = process_excel_to_json(temp_file_path, DATA_DIR)
 
+        # =========================
+        # HISTORIAL CON FECHA Y HORA
+        # =========================
+        # Mantiene latest.json como la tabla activa para web/bot,
+        # y guarda copias únicas por carga para auditoría/historial.
+        history_dir = DATA_DIR / "history"
+        excel_history_dir = history_dir / "excel_uploads"
+        json_history_dir = history_dir / "json_snapshots"
+        excel_history_dir.mkdir(parents=True, exist_ok=True)
+        json_history_dir.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_original_name = Path(filename).name or "upload.xlsx"
+
+        excel_history_path = excel_history_dir / f"{timestamp}_{safe_original_name}"
+        shutil.copy(temp_file_path, excel_history_path)
+
+        latest_path = DATA_DIR / "latest.json"
+        json_history_path = json_history_dir / f"{timestamp}_{safe_original_name.rsplit('.', 1)[0]}.json"
+
+        if latest_path.exists():
+            shutil.copy(latest_path, json_history_path)
+
         write_admin_log(
             admin_user_id=admin["user_id"],
             action="upload_excel",
-            details=f"Archivo: {stored_name} | Fecha: {result.get('date')}"
+            details=(
+                f"Archivo: {stored_name} | Fecha: {result.get('date')} | "
+                f"Historial Excel: {excel_history_path.name} | "
+                f"Historial JSON: {json_history_path.name if latest_path.exists() else 'N/A'}"
+            )
         )
 
         return {
@@ -2151,6 +2179,11 @@ async def admin_upload_excel(
             "counts": result.get("counts", {}),
             "latest_path": result.get("latest_path"),
             "daily_path": result.get("daily_path"),
+            "history": {
+                "timestamp": timestamp,
+                "excel_file": str(excel_history_path),
+                "json_snapshot": str(json_history_path) if latest_path.exists() else None,
+            },
         }
 
     except Exception as e:
@@ -2262,6 +2295,63 @@ def api_data_free_picks_video():
         return {"items": []}
 
     return {"items": [dict(row)]}
+
+# =========================
+# HISTORY ENDPOINTS
+# =========================
+
+@app.get("/api/history")
+def api_history():
+    history_dir = DATA_DIR / "history"
+    excel_history_dir = history_dir / "excel_uploads"
+    json_history_dir = history_dir / "json_snapshots"
+
+    excel_files = []
+    json_files = []
+
+    if excel_history_dir.exists():
+        excel_files = [
+            {
+                "filename": f.name,
+                "path": str(f),
+                "size_bytes": f.stat().st_size,
+                "modified_at": datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc).isoformat(),
+            }
+            for f in sorted(excel_history_dir.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if f.is_file()
+        ]
+
+    if json_history_dir.exists():
+        json_files = [
+            {
+                "filename": f.name,
+                "path": str(f),
+                "size_bytes": f.stat().st_size,
+                "modified_at": datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc).isoformat(),
+            }
+            for f in sorted(json_history_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if f.is_file()
+        ]
+
+    return {
+        "excel_uploads": excel_files,
+        "json_snapshots": json_files,
+    }
+
+@app.get("/api/history/json/{filename}")
+def api_history_json(filename: str):
+    safe_name = Path(filename).name
+    json_path = DATA_DIR / "history" / "json_snapshots" / safe_name
+
+    if not json_path.exists() or json_path.suffix.lower() != ".json":
+        raise HTTPException(status_code=404, detail="Snapshot no encontrado.")
+
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo leer el snapshot: {e}")
 
 # =========================
 # HEALTH / DEBUG
