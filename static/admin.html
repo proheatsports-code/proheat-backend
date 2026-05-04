@@ -1655,7 +1655,20 @@
       deleteUser(userId);
     }
 
+    function setDefaultEvaluationDate() {
+      const input = document.getElementById("evaluationDate");
+      if (!input || input.value) return;
+
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+
+      input.value = yesterday.toISOString().split("T")[0];
+    }
+
     function restoreAdminSession() {
+      setDefaultEvaluationDate();
+
       const session = getSavedSession();
       setSessionUI(session);
       if (session) loadPendingRequests();
