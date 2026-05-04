@@ -322,6 +322,29 @@
       margin-top: 10px;
     }
 
+
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 12px 0 18px;
+    }
+
+    .metric-card {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255,120,0,0.06);
+      border: 1px solid rgba(255,120,0,0.16);
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 900;
+      color: orange;
+      margin-top: 6px;
+    }
+
     @media (max-width: 980px) {
       .grid {
         grid-template-columns: 1fr;
@@ -449,6 +472,7 @@
             <button class="btn btn-secondary" onclick="loadUsers()">Usuarios</button>
             <button class="btn btn-secondary" onclick="loadBotUsers()">Usuarios Bot</button>
             <button class="btn btn-secondary" onclick="loadBotPaymentRequests()">Comprobantes Bot</button>
+            <button class="btn btn-secondary" onclick="loadEvaluationsDashboard()">Dashboard Resultados</button>
             <button class="btn btn-secondary" onclick="loadAdmins()">Admins</button>
             <button class="btn btn-secondary" onclick="loadVideoPicks()">VideoPicks</button>
             <button class="btn btn-secondary" onclick="loadFreePicksVideo()">Video lateral picks</button>
@@ -479,6 +503,12 @@
             <button class="btn btn-secondary" onclick="approveBotSelectedDays()">Aprobar Bot</button>
             <button class="btn btn-secondary" onclick="expireBotMembershipManual()">Vencer Bot</button>
             <button class="btn btn-secondary" onclick="loadBotUsers()">Ver Usuarios Bot</button>
+          </div>
+
+          <div class="toolbar">
+            <input type="date" id="evaluationDate" style="max-width: 220px; margin-bottom:0;" />
+            <button class="btn btn-primary" onclick="recalculateEvaluations()">Recalcular resultados</button>
+            <button class="btn btn-secondary" onclick="loadEvaluationsDashboard()">Ver dashboard resultados</button>
           </div>
 
           <div id="actionMessage" class="message hidden"></div>
@@ -814,6 +844,9 @@
       if (s === "expired") return `<span class="pill pill-red">expired</span>`;
       if (s === "reviewed") return `<span class="pill pill-green">reviewed</span>`;
       if (s === "inactive") return `<span class="pill pill-red">inactive</span>`;
+      if (s === "win" || s === "acierto") return `<span class="pill pill-green">acierto</span>`;
+      if (s === "loss" || s === "error") return `<span class="pill pill-red">error</span>`;
+      if (s === "push") return `<span class="pill pill-yellow">push</span>`;
       return `<span class="pill">${escapeHtml(status || "N/A")}</span>`;
     }
 
@@ -1087,6 +1120,140 @@
       if (!days) return;
       approveBotPaymentRequest(requestId, days);
       selectEl.value = "";
+    }
+
+
+    function formatPct(value) {
+      const n = Number(value || 0);
+      return `${n.toFixed(1)}%`;
+    }
+
+    function formatEvalDate(dateStr) {
+      if (!dateStr) return "";
+      return String(dateStr).slice(0, 10);
+    }
+
+    function renderEvaluationSummaryBlock(label, data) {
+      const day = data?.day || {};
+      const cumulative = data?.cumulative || {};
+      const topTeams = cumulative.top_teams || data?.top_teams || [];
+      const dayRows = data?.items || day.items || [];
+
+      let topTeamsHtml = "";
+      if (topTeams.length) {
+        topTeamsHtml = `
+          <h3 style="margin-top:18px;">Top equipos más predecibles</h3>
+          <table style="min-width:700px;"><thead><tr>
+            <th>Equipo</th><th>Picks</th><th>Aciertos</th><th>Efectividad</th>
+          </tr></thead><tbody>
+            ${topTeams.slice(0, 10).map(t => `
+              <tr>
+                <td>${escapeHtml(t.team || t.equipo || "")}</td>
+                <td>${escapeHtml(t.total ?? t.picks ?? 0)}</td>
+                <td>${escapeHtml(t.wins ?? t.aciertos ?? 0)}</td>
+                <td>${formatPct(t.hit_rate ?? t.efectividad ?? 0)}</td>
+              </tr>
+            `).join("")}
+          </tbody></table>
+        `;
+      }
+
+      let rowsHtml = "";
+      if (dayRows.length) {
+        rowsHtml = `
+          <h3 style="margin-top:18px;">Detalle del último cálculo</h3>
+          <table style="min-width:900px;"><thead><tr>
+            <th>Partido</th><th>Pick</th><th>Resultado</th><th>Estado</th><th>Mercado</th>
+          </tr></thead><tbody>
+            ${dayRows.slice(0, 30).map(r => `
+              <tr>
+                <td>${escapeHtml(r.partido || r.match || "")}</td>
+                <td>${escapeHtml(r.pick || r.prediccion || r.prediction || "")}</td>
+                <td>${escapeHtml(r.resultado || r.result || r.score || "")}</td>
+                <td>${statusPill(r.status || r.estado || "")}</td>
+                <td>${escapeHtml(r.market || r.mercado || "")}</td>
+              </tr>
+            `).join("")}
+          </tbody></table>
+        `;
+      }
+
+      return `
+        <div class="summary-box" style="margin-bottom:18px;">
+          <h2 style="color:orange;margin-top:0;">${escapeHtml(label)}</h2>
+          <div class="metric-grid">
+            <div class="metric-card"><div class="small">Día anterior · Aciertos</div><div class="metric-value">${escapeHtml(day.wins ?? day.aciertos ?? 0)}</div></div>
+            <div class="metric-card"><div class="small">Día anterior · Errores</div><div class="metric-value">${escapeHtml(day.losses ?? day.errores ?? 0)}</div></div>
+            <div class="metric-card"><div class="small">Día anterior · Efectividad</div><div class="metric-value">${formatPct(day.hit_rate ?? day.efectividad ?? 0)}</div></div>
+            <div class="metric-card"><div class="small">Acumulado · Efectividad</div><div class="metric-value">${formatPct(cumulative.hit_rate ?? cumulative.efectividad ?? 0)}</div></div>
+          </div>
+          ${topTeamsHtml}
+          ${rowsHtml}
+        </div>
+      `;
+    }
+
+    async function recalculateEvaluations() {
+      const dateValue = document.getElementById("evaluationDate").value;
+      const query = dateValue ? `?date=${encodeURIComponent(dateValue)}` : "";
+
+      if (!confirm(dateValue ? `¿Recalcular resultados para ${dateValue}?` : "¿Recalcular resultados del día anterior?")) return;
+
+      try {
+        showMessage("actionMessage", "Consultando API-Football y recalculando resultados...", "warning");
+        const response = await fetch(`${API_BASE}/admin/evaluations/recalculate${query}`, {
+          method: "POST",
+          headers: getAdminHeaders(false)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("actionMessage", data.detail || "No se pudieron recalcular las evaluaciones.", "error");
+          return;
+        }
+
+        showMessage("actionMessage", data.message || "Evaluaciones recalculadas correctamente.", "success");
+        loadEvaluationsDashboard();
+      } catch (error) {
+        showMessage("actionMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
+    async function loadEvaluationsDashboard() {
+      try {
+        const response = await fetch(`${API_BASE}/api/evaluations/frontend`, {
+          headers: getAdminHeaders(false)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          setTable("Dashboard Resultados", `<div class="summary-box">${escapeHtml(data.detail || "No se pudo cargar el dashboard de resultados.")}</div>`);
+          return;
+        }
+
+        const sections = data.sections || data.items || data || {};
+        const labels = {
+          ultra: "Predicciones Ultrafiltradas (Hoja2)",
+          public: "Predicciones Simples (Hoja8)",
+          combinadas: "Combinadas IA (Hoja4)",
+          inferno: "Combinadas Inferno (Hoja9)"
+        };
+
+        let html = `
+          <div class="summary-box">
+            <strong>Última evaluación:</strong> ${escapeHtml(formatEvalDate(data.date || data.evaluation_date || data.latest_date || ""))}<br>
+            <span class="small">Este dashboard evalúa solo Hoja2, Hoja8, Hoja4 y Hoja9.</span>
+          </div>
+        `;
+
+        ["ultra", "public", "combinadas", "inferno"].forEach(key => {
+          html += renderEvaluationSummaryBlock(labels[key], sections[key] || {});
+        });
+
+        setTable("Dashboard Resultados", html);
+      } catch (error) {
+        setTable("Dashboard Resultados", `<div class="summary-box">Error de conexión: ${escapeHtml(error)}</div>`);
+      }
     }
 
     async function loadAdmins() {
