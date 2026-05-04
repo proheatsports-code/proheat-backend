@@ -7,6 +7,8 @@ import secrets
 import hashlib
 import base64
 import shutil
+import re
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Any
@@ -58,6 +60,10 @@ BOT_RETURN_URL_BASE = os.getenv("BOT_RETURN_URL_BASE", "").strip().rstrip("/")
 
 # Telegram bot notifications
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", os.getenv("TELEGRAM_TOKEN", "")).strip()
+
+# API-Football / API-Sports
+API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY", os.getenv("FOOTBALL_API_KEY", os.getenv("API_SPORTS_KEY", ""))).strip()
+API_FOOTBALL_BASE = os.getenv("API_FOOTBALL_BASE", "https://v3.football.api-sports.io").strip().rstrip("/")
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -2353,6 +2359,472 @@ def api_history_json(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"No se pudo leer el snapshot: {e}")
 
+
+# =========================
+# AUTOMATIC EVALUATIONS / RESULTS DASHBOARD
+# =========================
+
+EVALUATION_SECTIONS = {
+    "ultra": "Predicciones Ultrafiltradas",
+    "public": "Predicciones Simples",
+    "combinadas": "Combinadas IA",
+    "inferno": "Combinadas Inferno",
+}
+
+FINISHED_FIXTURE_STATUSES = {"FT", "AET", "PEN"}
+
+def normalize_text(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = text.replace("’", "'").replace("`", "'")
+    text = re.sub(r"[^a-z0-9+\-.\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+def canonical_team_name(name: str) -> str:
+    text = normalize_text(name)
+    replacements = {
+        "man utd": "manchester united",
+        "man united": "manchester united",
+        "man city": "manchester city",
+        "atletico madrid": "atletico de madrid",
+        "athletic bilbao": "athletic club",
+        "sporting cp": "sporting",
+        "psg": "paris saint germain",
+        "bayern munich": "bayern munchen",
+        "bayern munchen": "bayern munich",
+        "inter": "inter milan",
+        "ac milan": "milan",
+        "roma": "as roma",
+        "spurs": "tottenham",
+    }
+    return replacements.get(text, text)
+
+def split_match_name(match_name: str) -> tuple[str, str]:
+    raw = str(match_name or "")
+    patterns = [r"\s+vs\.?\s+", r"\s+v\.?\s+", r"\s+-\s+", r"\s+–\s+"]
+    for pat in patterns:
+        parts = re.split(pat, raw, flags=re.IGNORECASE)
+        if len(parts) >= 2:
+            return parts[0].strip(), parts[1].strip()
+    return raw.strip(), ""
+
+def team_similarity(a: str, b: str) -> float:
+    a_norm = canonical_team_name(a)
+    b_norm = canonical_team_name(b)
+    if not a_norm or not b_norm:
+        return 0.0
+    if a_norm == b_norm:
+        return 1.0
+    if a_norm in b_norm or b_norm in a_norm:
+        return 0.92
+    a_tokens = set(a_norm.split())
+    b_tokens = set(b_norm.split())
+    if not a_tokens or not b_tokens:
+        return 0.0
+    return len(a_tokens & b_tokens) / max(len(a_tokens), len(b_tokens))
+
+def match_fixture_for_pick(match_name: str, fixtures: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    pick_home, pick_away = split_match_name(match_name)
+    if not pick_home or not pick_away:
+        return None
+
+    best_fixture = None
+    best_score = 0.0
+    for fixture in fixtures:
+        teams = fixture.get("teams", {}) or {}
+        home = (teams.get("home") or {}).get("name", "")
+        away = (teams.get("away") or {}).get("name", "")
+        direct = (team_similarity(pick_home, home) + team_similarity(pick_away, away)) / 2
+        reversed_score = (team_similarity(pick_home, away) + team_similarity(pick_away, home)) / 2
+        score = max(direct, reversed_score * 0.96)
+        if score > best_score:
+            best_score = score
+            best_fixture = fixture
+
+    return best_fixture if best_score >= 0.55 else None
+
+def football_api_get_fixtures(date_key: str) -> list[dict[str, Any]]:
+    if not API_FOOTBALL_KEY:
+        raise HTTPException(status_code=500, detail="Falta API_FOOTBALL_KEY en Railway.")
+
+    response = requests.get(
+        f"{API_FOOTBALL_BASE}/fixtures",
+        headers={"x-apisports-key": API_FOOTBALL_KEY},
+        params={"date": date_key},
+        timeout=35,
+    )
+    if response.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail=f"Error consultando API-Football: {response.text}")
+    payload = response.json()
+    return payload.get("response", []) if isinstance(payload, dict) else []
+
+def fixture_score(fixture: dict[str, Any]) -> Optional[dict[str, Any]]:
+    fixture_info = fixture.get("fixture", {}) or {}
+    status_short = ((fixture_info.get("status") or {}).get("short") or "").upper()
+    if status_short not in FINISHED_FIXTURE_STATUSES:
+        return None
+
+    goals = fixture.get("goals", {}) or {}
+    home_goals = goals.get("home")
+    away_goals = goals.get("away")
+    if home_goals is None or away_goals is None:
+        return None
+
+    teams = fixture.get("teams", {}) or {}
+    return {
+        "home_team": (teams.get("home") or {}).get("name", ""),
+        "away_team": (teams.get("away") or {}).get("name", ""),
+        "home_goals": int(home_goals),
+        "away_goals": int(away_goals),
+        "total_goals": int(home_goals) + int(away_goals),
+        "status": status_short,
+    }
+
+def resolve_team_side(prediction_text: str, score: dict[str, Any], pick_home: str = "", pick_away: str = "") -> Optional[str]:
+    text = canonical_team_name(prediction_text)
+    candidates = [
+        ("home", score.get("home_team", "")),
+        ("away", score.get("away_team", "")),
+        ("home", pick_home),
+        ("away", pick_away),
+    ]
+    best_side = None
+    best_score = 0.0
+    for side, name in candidates:
+        sim = team_similarity(text, name)
+        # Also check if team name is embedded in the prediction phrase.
+        team_norm = canonical_team_name(name)
+        if team_norm and team_norm in text:
+            sim = max(sim, 0.95)
+        if sim > best_score:
+            best_score = sim
+            best_side = side
+    return best_side if best_score >= 0.45 else None
+
+def first_line_value(text: str) -> Optional[tuple[str, float]]:
+    match = re.search(r"([+-])\s*(\d+(?:\.\d+)?)", text)
+    if not match:
+        return None
+    return match.group(1), float(match.group(2))
+
+def evaluate_prediction_text(prediction: str, score: dict[str, Any], match_name: str = "") -> dict[str, Any]:
+    original_prediction = str(prediction or "").strip()
+    text = normalize_text(original_prediction)
+    pick_home, pick_away = split_match_name(match_name)
+
+    if not text:
+        return {"status": "unknown", "prediction": original_prediction, "reason": "Predicción vacía"}
+
+    hg = int(score["home_goals"])
+    ag = int(score["away_goals"])
+    total = hg + ag
+
+    # Ambos anotan / BTTS
+    if "ambos" in text and ("anotan" in text or "marcan" in text):
+        return {"status": "hit" if (hg > 0 and ag > 0) else "miss", "prediction": original_prediction, "reason": f"Resultado {hg}-{ag}"}
+
+    # Doble oportunidad: Equipo o Empate / gana o empata
+    if "empate" in text and ("gana" in text or " o " in text):
+        side = resolve_team_side(text, score, pick_home, pick_away)
+        if side == "home":
+            return {"status": "hit" if hg >= ag else "miss", "prediction": original_prediction, "reason": f"{score['home_team']} {hg}-{ag} {score['away_team']}"}
+        if side == "away":
+            return {"status": "hit" if ag >= hg else "miss", "prediction": original_prediction, "reason": f"{score['home_team']} {hg}-{ag} {score['away_team']}"}
+        if "empate" in text and "gana" not in text:
+            return {"status": "hit" if hg == ag else "miss", "prediction": original_prediction, "reason": f"Resultado {hg}-{ag}"}
+
+    # Hándicap simple tipo Equipo +1.5 Hándicap / Handicap -2.5
+    if "handicap" in text or "handicap" in normalize_text(original_prediction.replace("á", "a")):
+        line = first_line_value(text)
+        side = resolve_team_side(text, score, pick_home, pick_away)
+        if line and side:
+            sign, value = line
+            team_goals = hg if side == "home" else ag
+            opp_goals = ag if side == "home" else hg
+            adjusted = team_goals + value if sign == "+" else team_goals - value
+            return {"status": "hit" if adjusted > opp_goals else "miss", "prediction": original_prediction, "reason": f"Marcador {hg}-{ag}, hándicap {sign}{value}"}
+
+    # Totales de goles: Goles +1.5 / -3.5
+    if "gol" in text or "total" in text or "marcador global" in text:
+        line = first_line_value(text)
+        if line:
+            sign, value = line
+            # Si la predicción menciona un equipo, evalúa goles del equipo. Si no, evalúa total.
+            side = resolve_team_side(text, score, pick_home, pick_away)
+            metric_value = total
+            metric_label = "total"
+            if side == "home":
+                metric_value = hg
+                metric_label = score.get("home_team", "local")
+            elif side == "away":
+                metric_value = ag
+                metric_label = score.get("away_team", "visitante")
+            ok = metric_value > value if sign == "+" else metric_value < value
+            return {"status": "hit" if ok else "miss", "prediction": original_prediction, "reason": f"{metric_label}: {metric_value}, línea {sign}{value}"}
+
+    # ML directo / gana
+    if " ml" in f" {text}" or "gana" in text:
+        side = resolve_team_side(text, score, pick_home, pick_away)
+        if side == "home":
+            return {"status": "hit" if hg > ag else "miss", "prediction": original_prediction, "reason": f"Resultado {hg}-{ag}"}
+        if side == "away":
+            return {"status": "hit" if ag > hg else "miss", "prediction": original_prediction, "reason": f"Resultado {hg}-{ag}"}
+
+    return {"status": "unknown", "prediction": original_prediction, "reason": "Mercado no soportado todavía"}
+
+def extract_prediction_fields(section: str, row: dict[str, Any]) -> list[dict[str, str]]:
+    ignore_keys = {"hora", "liga", "sem", "partido", "fecha", "equipo", "id", "notas", "contexto"}
+    preferred_keys = [
+        "ml_prob", "ml", "pick", "prediccion", "predicción", "pronostico", "pronóstico",
+        "apuesta", "mercado", "seleccion", "selección", "marcador_global", "goles_local", "goles_visitante",
+    ]
+    fields: list[dict[str, str]] = []
+    for key in preferred_keys:
+        if key in row and str(row.get(key, "")).strip():
+            fields.append({"key": key, "value": str(row.get(key)).strip()})
+
+    # Para combinadas puede haber columnas con nombres no estándar. Toma textos largos útiles.
+    if section in {"combinadas", "inferno"}:
+        for key, value in row.items():
+            key_norm = normalize_text(key)
+            if key_norm in ignore_keys or any(f["key"] == key for f in fields):
+                continue
+            value_text = str(value or "").strip()
+            if value_text and len(value_text) >= 3:
+                fields.append({"key": str(key), "value": value_text})
+
+    # Evita duplicados exactos conservando orden.
+    seen = set()
+    unique = []
+    for field in fields:
+        token = (field["key"], field["value"])
+        if token not in seen:
+            seen.add(token)
+            unique.append(field)
+    return unique
+
+def evaluate_row(section: str, row: dict[str, Any], fixtures: list[dict[str, Any]]) -> dict[str, Any]:
+    match_name = str(row.get("partido") or row.get("Partido") or "").strip()
+    base = {
+        "section": section,
+        "section_label": EVALUATION_SECTIONS.get(section, section),
+        "hora": row.get("hora") or row.get("Hora"),
+        "liga": row.get("liga") or row.get("Liga"),
+        "partido": match_name,
+        "status": "pending",
+        "score": None,
+        "evaluations": [],
+    }
+
+    fixture = match_fixture_for_pick(match_name, fixtures)
+    if not fixture:
+        base["status"] = "pending"
+        base["reason"] = "Partido no encontrado en API-Football"
+        return base
+
+    score = fixture_score(fixture)
+    if not score:
+        base["status"] = "pending"
+        base["reason"] = "Partido encontrado, pero aún no tiene resultado final"
+        return base
+
+    base["score"] = score
+    fields = extract_prediction_fields(section, row)
+    if not fields:
+        base["status"] = "unknown"
+        base["reason"] = "No se encontraron columnas de predicción evaluables"
+        return base
+
+    evaluations = []
+    for field in fields:
+        ev = evaluate_prediction_text(field["value"], score, match_name)
+        ev["field"] = field["key"]
+        evaluations.append(ev)
+
+    base["evaluations"] = evaluations
+    known = [ev for ev in evaluations if ev["status"] in {"hit", "miss"}]
+    if not known:
+        base["status"] = "unknown"
+        base["reason"] = "Sin mercados soportados para evaluación automática"
+    elif any(ev["status"] == "miss" for ev in known):
+        base["status"] = "miss"
+        base["reason"] = "Al menos una selección evaluada falló"
+    else:
+        base["status"] = "hit"
+        base["reason"] = "Todas las selecciones evaluadas acertaron"
+    return base
+
+def summarize_evaluations(section_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    total = len(section_rows)
+    hits = sum(1 for item in section_rows if item.get("status") == "hit")
+    misses = sum(1 for item in section_rows if item.get("status") == "miss")
+    pending = sum(1 for item in section_rows if item.get("status") == "pending")
+    unknown = sum(1 for item in section_rows if item.get("status") == "unknown")
+    decided = hits + misses
+    pct = round((hits / decided) * 100, 2) if decided else 0.0
+    return {
+        "total": total,
+        "hits": hits,
+        "misses": misses,
+        "pending": pending,
+        "unknown": unknown,
+        "decided": decided,
+        "effectiveness_pct": pct,
+    }
+
+def build_evaluation_payload(snapshot_data: dict[str, Any], date_key: str) -> dict[str, Any]:
+    fixtures = football_api_get_fixtures(date_key)
+    sections: dict[str, Any] = {}
+    for section, label in EVALUATION_SECTIONS.items():
+        rows = snapshot_data.get(section, [])
+        if not isinstance(rows, list):
+            rows = []
+        evaluated_rows = [evaluate_row(section, row, fixtures) for row in rows if isinstance(row, dict)]
+        sections[section] = {
+            "label": label,
+            "summary": summarize_evaluations(evaluated_rows),
+            "items": evaluated_rows,
+        }
+    return {
+        "date": date_key,
+        "generated_at": iso_now(),
+        "sections": sections,
+    }
+
+def evaluations_dir() -> Path:
+    path = DATA_DIR / "evaluations"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+def load_snapshot_for_evaluation(history_filename: Optional[str] = None) -> tuple[str, dict[str, Any]]:
+    if history_filename:
+        safe_name = Path(history_filename).name
+        snapshot_path = DATA_DIR / "history" / "json_snapshots" / safe_name
+    else:
+        snapshot_path = DATA_DIR / "latest.json"
+
+    if not snapshot_path.exists():
+        raise HTTPException(status_code=404, detail="Snapshot de picks no encontrado.")
+
+    with open(snapshot_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="Snapshot inválido.")
+    return snapshot_path.name, data
+
+def save_evaluation_payload(payload: dict[str, Any]) -> Path:
+    date_key = payload.get("date") or datetime.now().strftime("%Y-%m-%d")
+    path = evaluations_dir() / f"{date_key}.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    return path
+
+def load_evaluation_file(path: Path) -> Optional[dict[str, Any]]:
+    try:
+        if not path.exists():
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+def latest_evaluation_payload() -> Optional[dict[str, Any]]:
+    files = sorted(evaluations_dir().glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for file in files:
+        data = load_evaluation_file(file)
+        if data:
+            return data
+    return None
+
+def cumulative_evaluations_payload() -> dict[str, Any]:
+    totals = {
+        section: {
+            "label": label,
+            "summary": {"total": 0, "hits": 0, "misses": 0, "pending": 0, "unknown": 0, "decided": 0, "effectiveness_pct": 0.0},
+            "daily": [],
+        }
+        for section, label in EVALUATION_SECTIONS.items()
+    }
+    files = sorted(evaluations_dir().glob("*.json"))
+    for file in files:
+        data = load_evaluation_file(file)
+        if not data:
+            continue
+        date_key = data.get("date") or file.stem
+        for section in EVALUATION_SECTIONS:
+            summary = (((data.get("sections") or {}).get(section) or {}).get("summary") or {})
+            totals[section]["daily"].append({
+                "date": date_key,
+                "effectiveness_pct": summary.get("effectiveness_pct", 0),
+                "hits": summary.get("hits", 0),
+                "misses": summary.get("misses", 0),
+                "pending": summary.get("pending", 0),
+                "unknown": summary.get("unknown", 0),
+            })
+            for key in ["total", "hits", "misses", "pending", "unknown", "decided"]:
+                totals[section]["summary"][key] += int(summary.get(key, 0) or 0)
+
+    for section in totals:
+        s = totals[section]["summary"]
+        s["effectiveness_pct"] = round((s["hits"] / s["decided"]) * 100, 2) if s["decided"] else 0.0
+    return {"generated_at": iso_now(), "sections": totals}
+
+@app.post("/admin/evaluations/recalculate")
+def admin_recalculate_evaluations(
+    date: str = Form(...),
+    history_filename: Optional[str] = Form(None),
+    admin=Depends(require_admin)
+):
+    # date debe venir como YYYY-MM-DD porque API-Football usa ese formato.
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        raise HTTPException(status_code=400, detail="date debe tener formato YYYY-MM-DD.")
+
+    snapshot_name, snapshot_data = load_snapshot_for_evaluation(history_filename)
+    payload = build_evaluation_payload(snapshot_data, date)
+    payload["source_snapshot"] = snapshot_name
+    saved_path = save_evaluation_payload(payload)
+
+    write_admin_log(
+        admin_user_id=admin["user_id"],
+        action="recalculate_evaluations",
+        details=f"date={date} snapshot={snapshot_name} saved={saved_path.name}"
+    )
+
+    return {
+        "status": "ok",
+        "message": "Evaluación recalculada correctamente.",
+        "date": date,
+        "source_snapshot": snapshot_name,
+        "saved_path": str(saved_path),
+        "payload": payload,
+    }
+
+@app.get("/api/evaluations/day/{date_key}")
+def api_evaluations_day(date_key: str):
+    safe_date = Path(date_key).name
+    path = evaluations_dir() / f"{safe_date}.json"
+    data = load_evaluation_file(path)
+    if not data:
+        raise HTTPException(status_code=404, detail="Evaluación no encontrada para esa fecha.")
+    return data
+
+@app.get("/api/evaluations/cumulative")
+def api_evaluations_cumulative():
+    return cumulative_evaluations_payload()
+
+@app.get("/api/evaluations/frontend")
+def api_evaluations_frontend():
+    latest = latest_evaluation_payload()
+    cumulative = cumulative_evaluations_payload()
+    return {
+        "latest": latest,
+        "cumulative": cumulative,
+        "sections": EVALUATION_SECTIONS,
+    }
+
 # =========================
 # HEALTH / DEBUG
 # =========================
@@ -2382,6 +2854,9 @@ def health():
         "bot_premium_days": BOT_PREMIUM_DAYS,
         "bot_payment_clabe_configured": bool(BOT_PAYMENT_CLABE and not BOT_PAYMENT_CLABE.startswith("CONFIGURA_")),
         "telegram_bot_notifications_enabled": bool(TELEGRAM_BOT_TOKEN),
+        "api_football_configured": bool(API_FOOTBALL_KEY),
+        "api_football_base": API_FOOTBALL_BASE,
+        "evaluations_dir": str(DATA_DIR / "evaluations"),
     }
 
 # =========================
