@@ -557,6 +557,89 @@
       background: rgba(255,255,255,0.02);
     }
 
+
+
+    .results-dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .results-card {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,120,0,0.14);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .results-card h3 {
+      margin: 0 0 12px;
+      color: orange;
+      font-size: 22px;
+    }
+
+    .results-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 12px 0 14px;
+    }
+
+    .results-metric {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .results-metric-label {
+      color: #bfbfbf;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .results-metric-value {
+      color: orange;
+      font-size: 24px;
+      font-weight: 900;
+      margin-top: 6px;
+    }
+
+    .results-bar-wrap {
+      margin-top: 10px;
+    }
+
+    .results-bar-label {
+      display: flex;
+      justify-content: space-between;
+      color: #d6d6d6;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .results-bar-bg {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .results-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: orange;
+      border-radius: 999px;
+      box-shadow: 0 0 12px rgba(255,140,0,0.28);
+    }
+
+    .results-top-list {
+      margin-top: 12px;
+      color: #d8d8d8;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
     .contact-list {
       display: grid;
       gap: 10px;
@@ -697,7 +780,7 @@
           </p>
 
           <div class="hero-actions">
-            <a href="#free-picks" class="btn-main" id="btnViewPicks">Ver picks</a>
+            <a href="#free-picks" class="btn-main" id="btnViewPicks">Ver predicciones</a>
             <a href="#bot" class="btn-secondary" id="btnViewBot">Ver bot</a>
           </div>
         </div>
@@ -707,17 +790,34 @@
           <div id="matchCenterList">
             <div class="match-item">Cargando...</div>
           </div>
-          <a href="#free-picks" class="btn-main" id="btnGoFreePicks">Ir a picks gratuitas</a>
+          <a href="#free-picks" class="btn-main" id="btnGoFreePicks">Ir a predicciones gratuitas</a>
+        </div>
+      </div>
+    </section>
+
+
+
+    <section class="section" id="resultados-proheat">
+      <div class="section-title">
+        <h2 id="resultsSectionTitle">📊 Resultados ProHeat</h2>
+      </div>
+      <div class="section-note" id="resultsSectionNote">
+        Evaluación automática de resultados para Predicciones Ultrafiltradas, Predicciones Simples, Combinadas IA y Combinadas Inferno.
+      </div>
+
+      <div class="card">
+        <div id="resultsDashboardContainer">
+          <div class="muted" id="loadingResultsText">Cargando resultados...</div>
         </div>
       </div>
     </section>
 
     <section class="section" id="free-picks">
       <div class="section-title">
-        <h2 id="freePicksTitle">🔥 Picks Gratuitas</h2>
+        <h2 id="freePicksTitle">🔥 Predicciones Gratuitas</h2>
       </div>
       <div class="section-note" id="freePicksNote">
-        Consulta las selecciones públicas del día cargadas desde el backend central de ProHeat.
+        Consulta las predicciones públicas del día cargadas desde el backend central de ProHeat.
       </div>
 
       <div class="card">
@@ -728,7 +828,7 @@
 
           <div id="predictionList" class="picks-grid">
             <div class="pick-card">
-              <div class="pick-line" id="loadingPicksText">Cargando picks...</div>
+              <div class="pick-line" id="loadingPicksText">Cargando predicciones...</div>
             </div>
           </div>
         </div>
@@ -811,7 +911,7 @@
           Puedes seguir usando la versión gratuita o actualizar a Premium.
           <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
             <a class="btn-main" href="/premium?checkout=1">Actualizar a Premium</a>
-            <a class="btn-secondary" href="#free-picks">Ver picks gratuitas</a>
+            <a class="btn-secondary" href="#free-picks">Ver predicciones gratuitas</a>
           </div>
         </div>
 
@@ -874,18 +974,19 @@
     let publicPicksCache = [];
     let videoPickCache = null;
     let freePicksVideoCache = null;
+    let resultsDashboardCache = null;
     let premiumCache = {};
     let currentPremiumTab = "general";
 
     const premiumSections = [
       { key: "general", labelEs: "Partidos del día", labelEn: "Today's Matches", endpoint: "/api/data/general" },
-      { key: "ultra", labelEs: "Picks Ultrafiltradas", labelEn: "Ultra-filtered Picks", endpoint: "/api/data/ultra" },
+      { key: "ultra", labelEs: "Predicciones Ultrafiltradas", labelEn: "Ultra-filtered Predictions", endpoint: "/api/data/ultra" },
       { key: "stakes", labelEs: "Control de banca", labelEn: "Bankroll Control", endpoint: "/api/data/stakes" },
       { key: "combinadas", labelEs: "Combinadas IA", labelEn: "AI Parlays", endpoint: "/api/data/combinadas" },
       { key: "goles", labelEs: "Goles", labelEn: "Goals", endpoint: "/api/data/goles" },
       { key: "top", labelEs: "Top Valor Estadístico", labelEn: "Top Statistical Value", endpoint: "/api/data/top" },
       { key: "alta", labelEs: "Equipos confiables", labelEn: "Reliable Teams", endpoint: "/api/data/alta-confianza" },
-      { key: "simples", labelEs: "Picks Simples", labelEn: "Single Picks", endpoint: "/api/data/public" },
+      { key: "simples", labelEs: "Predicciones Simples", labelEn: "Single Predictions", endpoint: "/api/data/public" },
       { key: "inferno", labelEs: "Combinadas Inferno", labelEn: "Inferno Parlays", endpoint: "/api/data/inferno" }
     ];
 
@@ -906,19 +1007,24 @@
         heroLine4: "centralizada",
         heroDescription: "ProHeat Sports integra picks públicos, contenido premium y panel administrativo desde una sola infraestructura. Todo alimentado directamente desde el backend central de ProHeat.",
 
-        btnViewPicks: "Ver picks",
+        btnViewPicks: "Ver predicciones",
         btnViewBot: "Ver bot",
         matchCenterTitle: "Match Center",
-        btnGoFreePicks: "Ir a picks gratuitas",
+        btnGoFreePicks: "Ir a predicciones gratuitas",
 
-        freePicksTitle: "🔥 Picks Gratuitas",
-        freePicksNote: "Consulta las selecciones públicas del día cargadas desde el backend central de ProHeat.",
-        loadingPicksText: "Cargando picks...",
+        freePicksTitle: "🔥 Predicciones Gratuitas",
+        freePicksNote: "Consulta las predicciones públicas del día cargadas desde el backend central de ProHeat.",
+        loadingPicksText: "Cargando predicciones...",
         loadingFreePicksVideoText: "Cargando video...",
-        noPicks: "No hay picks disponibles por el momento.",
-        picksError: "Error cargando picks.",
+        noPicks: "No hay predicciones disponibles por el momento.",
+        picksError: "Error cargando predicciones.",
         noFreePicksVideo: "No hay video disponible.",
         freePicksVideoError: "Error cargando video.",
+        resultsSectionTitle: "📊 Resultados ProHeat",
+        resultsSectionNote: "Evaluación automática de resultados para Predicciones Ultrafiltradas, Predicciones Simples, Combinadas IA y Combinadas Inferno.",
+        loadingResultsText: "Cargando resultados...",
+        resultsError: "Error cargando resultados.",
+        noResults: "Aún no hay resultados evaluados.",
 
         videoSectionTitle: "🎥 VideoPick del Día",
         videoSectionNote: "Mira el videopick destacado del día con reproducción automática en silencio.",
@@ -969,19 +1075,24 @@
         heroLine4: "structure",
         heroDescription: "ProHeat Sports brings together public picks, premium content, and an admin panel within a single infrastructure. Everything is powered directly from the central ProHeat backend.",
 
-        btnViewPicks: "View picks",
+        btnViewPicks: "View predictions",
         btnViewBot: "View bot",
         matchCenterTitle: "Match Center",
-        btnGoFreePicks: "Go to free picks",
+        btnGoFreePicks: "Go to free predictions",
 
-        freePicksTitle: "🔥 Free Picks",
-        freePicksNote: "Check today’s public selections loaded from the central ProHeat backend.",
-        loadingPicksText: "Loading picks...",
+        freePicksTitle: "🔥 Free Predictions",
+        freePicksNote: "Check today’s public predictions loaded from the central ProHeat backend.",
+        loadingPicksText: "Loading predictions...",
         loadingFreePicksVideoText: "Loading video...",
-        noPicks: "No picks are available at the moment.",
-        picksError: "Error loading picks.",
+        noPicks: "No predictions are available at the moment.",
+        picksError: "Error loading predictions.",
         noFreePicksVideo: "No video available.",
         freePicksVideoError: "Error loading video.",
+        resultsSectionTitle: "📊 ProHeat Results",
+        resultsSectionNote: "Automatic results evaluation for Ultra-filtered Predictions, Single Predictions, AI Parlays, and Inferno Parlays.",
+        loadingResultsText: "Loading results...",
+        resultsError: "Error loading results.",
+        noResults: "No evaluated results yet.",
 
         videoSectionTitle: "🎥 VideoPick of the Day",
         videoSectionNote: "Watch today’s featured videopick with muted autoplay.",
@@ -1217,6 +1328,7 @@
       renderMatchCenter(publicPicksCache);
       renderVideoPick(videoPickCache);
       renderFreePicksVideo(freePicksVideoCache);
+      renderResultsDashboard(resultsDashboardCache);
       renderPremiumTabs();
       if (premiumCache[currentPremiumTab]) renderPremiumTable(currentPremiumTab, premiumCache[currentPremiumTab]);
     }
@@ -1247,6 +1359,10 @@
 
       document.getElementById("freePicksTitle").textContent = t("freePicksTitle");
       document.getElementById("freePicksNote").textContent = t("freePicksNote");
+      document.getElementById("resultsSectionTitle").textContent = t("resultsSectionTitle");
+      document.getElementById("resultsSectionNote").textContent = t("resultsSectionNote");
+      const loadingResultsEl = document.getElementById("loadingResultsText");
+      if (loadingResultsEl) loadingResultsEl.textContent = t("loadingResultsText");
 
       const loadingPicksEl = document.getElementById("loadingPicksText");
       if (loadingPicksEl) loadingPicksEl.textContent = t("loadingPicksText");
@@ -1408,6 +1524,138 @@
       ensureAutoplay(document.getElementById("videoPickPlayer"));
     }
 
+
+
+    function pctValue(value) {
+      const n = Number(value || 0);
+      return Math.max(0, Math.min(100, n));
+    }
+
+    function formatPct(value) {
+      return `${pctValue(value).toFixed(1)}%`;
+    }
+
+    function getEvalNumber(obj, keys, fallback = 0) {
+      for (const key of keys) {
+        if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== "") return obj[key];
+      }
+      return fallback;
+    }
+
+    function normalizeResultsSection(section) {
+      const day = section?.day || section?.daily || {};
+      const cumulative = section?.cumulative || section?.acumulado || {};
+      const topTeams = cumulative.top_teams || section?.top_teams || [];
+      return { day, cumulative, topTeams };
+    }
+
+    function renderResultsCard(title, section) {
+      const normalized = normalizeResultsSection(section || {});
+      const day = normalized.day;
+      const cumulative = normalized.cumulative;
+      const topTeams = normalized.topTeams || [];
+
+      const dayWins = getEvalNumber(day, ["wins", "aciertos"]);
+      const dayLosses = getEvalNumber(day, ["losses", "errores"]);
+      const dayRate = getEvalNumber(day, ["hit_rate", "efectividad"]);
+      const cumulativeRate = getEvalNumber(cumulative, ["hit_rate", "efectividad"]);
+
+      const teamsHtml = topTeams.length ? `
+        <div class="results-top-list">
+          <strong>${currentLanguage === "en" ? "Most predictable teams" : "Top equipos más predecibles"}</strong><br>
+          ${topTeams.slice(0, 5).map(t => {
+            const team = t.team || t.equipo || "";
+            const total = t.total ?? t.picks ?? 0;
+            const wins = t.wins ?? t.aciertos ?? 0;
+            const rate = t.hit_rate ?? t.efectividad ?? 0;
+            return `• ${escapeHtml(team)} · ${escapeHtml(wins)}/${escapeHtml(total)} · ${formatPct(rate)}`;
+          }).join("<br>")}
+        </div>
+      ` : "";
+
+      return `
+        <div class="results-card">
+          <h3>${escapeHtml(title)}</h3>
+          <div class="results-metrics">
+            <div class="results-metric">
+              <div class="results-metric-label">${currentLanguage === "en" ? "Yesterday wins" : "Aciertos ayer"}</div>
+              <div class="results-metric-value">${escapeHtml(dayWins)}</div>
+            </div>
+            <div class="results-metric">
+              <div class="results-metric-label">${currentLanguage === "en" ? "Yesterday losses" : "Errores ayer"}</div>
+              <div class="results-metric-value">${escapeHtml(dayLosses)}</div>
+            </div>
+          </div>
+
+          <div class="results-bar-wrap">
+            <div class="results-bar-label"><span>${currentLanguage === "en" ? "Previous day" : "Día anterior"}</span><strong>${formatPct(dayRate)}</strong></div>
+            <div class="results-bar-bg"><div class="results-bar-fill" style="width:${pctValue(dayRate)}%"></div></div>
+          </div>
+
+          <div class="results-bar-wrap">
+            <div class="results-bar-label"><span>${currentLanguage === "en" ? "Accumulated" : "Acumulado"}</span><strong>${formatPct(cumulativeRate)}</strong></div>
+            <div class="results-bar-bg"><div class="results-bar-fill" style="width:${pctValue(cumulativeRate)}%"></div></div>
+          </div>
+          ${teamsHtml}
+        </div>
+      `;
+    }
+
+    function renderResultsDashboard(data) {
+      const container = document.getElementById("resultsDashboardContainer");
+      if (!container) return;
+
+      if (!data) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("loadingResultsText"))}</div>`;
+        return;
+      }
+
+      const sections = data.sections || data.items || {};
+      const hasAny = sections && ["ultra", "public", "combinadas", "inferno"].some(k => sections[k]);
+
+      if (!hasAny) {
+        container.innerHTML = `<div class="muted">${escapeHtml(t("noResults"))}</div>`;
+        return;
+      }
+
+      const labels = currentLanguage === "en" ? {
+        ultra: "Ultra-filtered Predictions",
+        public: "Single Predictions",
+        combinadas: "AI Parlays",
+        inferno: "Inferno Parlays"
+      } : {
+        ultra: "Predicciones Ultrafiltradas",
+        public: "Predicciones Simples",
+        combinadas: "Combinadas IA",
+        inferno: "Combinadas Inferno"
+      };
+
+      const date = data.date || data.evaluation_date || data.latest_date || "";
+      container.innerHTML = `
+        <div class="section-note" style="margin-bottom:14px;">
+          ${date ? `<strong>${currentLanguage === "en" ? "Latest evaluation" : "Última evaluación"}:</strong> ${escapeHtml(String(date).slice(0, 10))}` : ""}
+        </div>
+        <div class="results-dashboard-grid">
+          ${["ultra", "public", "combinadas", "inferno"].map(key => renderResultsCard(labels[key], sections[key] || {})).join("")}
+        </div>
+      `;
+    }
+
+    async function loadResultsDashboard() {
+      const container = document.getElementById("resultsDashboardContainer");
+      if (container) container.innerHTML = `<div class="muted">${escapeHtml(t("loadingResultsText"))}</div>`;
+
+      try {
+        const res = await fetch(`${API}/api/evaluations/frontend`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Error");
+        resultsDashboardCache = data;
+        renderResultsDashboard(resultsDashboardCache);
+      } catch (error) {
+        if (container) container.innerHTML = `<div class="muted">${escapeHtml(t("resultsError"))}</div>`;
+      }
+    }
+
     async function loadPublicPicks() {
       const container = document.getElementById("predictionList");
       container.innerHTML = `<div class="pick-card"><div class="pick-line">${escapeHtml(t("loadingPicksText"))}</div></div>`;
@@ -1552,6 +1800,7 @@
     applyLanguage();
     applyAuthUI();
     loadPublicPicks();
+    loadResultsDashboard();
     loadFreePicksPromoVideo();
     loadVideoPick();
     checkMembershipAndPremium(false);
