@@ -386,6 +386,13 @@ class TelegramMembershipIn(BaseModel):
 class TelegramExpireIn(BaseModel):
     telegram_id: str
 
+class EvaluationManualOverrideIn(BaseModel):
+    date: str
+    section: str
+    item_index: int
+    status: str
+    reason: Optional[str] = None
+
 # =========================
 # AUTH HELPERS
 # =========================
@@ -2816,6 +2823,74 @@ def summarize_evaluations(section_rows: list[dict[str, Any]]) -> dict[str, Any]:
         "effectiveness_pct": pct,
     }
 
+def manual_overrides_path() -> Path:
+    path = evaluations_dir() / "manual_overrides.json"
+    return path
+
+def load_manual_overrides() -> dict[str, Any]:
+    path = manual_overrides_path()
+    if not path.exists():
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def save_manual_overrides(data: dict[str, Any]) -> None:
+    path = manual_overrides_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def apply_manual_overrides_to_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    date_key = str(payload.get("date") or "")
+    if not date_key:
+        return payload
+
+    all_overrides = load_manual_overrides()
+    day_overrides = all_overrides.get(date_key, {}) if isinstance(all_overrides, dict) else {}
+    if not isinstance(day_overrides, dict) or not day_overrides:
+        return payload
+
+    sections = payload.get("sections") or {}
+    for section, section_overrides in day_overrides.items():
+        if section not in sections or not isinstance(section_overrides, dict):
+            continue
+        items = sections[section].get("items") or []
+        for index_text, override in section_overrides.items():
+            try:
+                idx = int(index_text)
+            except Exception:
+                continue
+            if idx < 0 or idx >= len(items) or not isinstance(override, dict):
+                continue
+
+            status = str(override.get("status") or "").lower().strip()
+            if status not in {"hit", "miss", "pending", "unknown"}:
+                continue
+
+            item = items[idx]
+            item["original_status"] = item.get("original_status") or item.get("status")
+            item["status"] = status
+            item["manual_override"] = True
+            item["manual_override_at"] = override.get("updated_at")
+            item["manual_override_by"] = override.get("updated_by")
+            item["reason"] = override.get("reason") or f"Resultado marcado manualmente como {status}."
+            if status in {"hit", "miss"}:
+                item["evaluations"] = item.get("evaluations") or [{
+                    "field": "manual",
+                    "prediction": item.get("partido") or "Override manual",
+                    "status": status,
+                    "reason": item["reason"],
+                }]
+
+        sections[section]["summary"] = summarize_evaluations(items)
+
+    payload["sections"] = sections
+    return payload
+
 def build_evaluation_payload(snapshot_data: dict[str, Any], date_key: str) -> dict[str, Any]:
     fixtures = football_api_get_fixtures(date_key)
     sections: dict[str, Any] = {}
@@ -2829,11 +2904,12 @@ def build_evaluation_payload(snapshot_data: dict[str, Any], date_key: str) -> di
             "summary": summarize_evaluations(evaluated_rows),
             "items": evaluated_rows,
         }
-    return {
+    payload = {
         "date": date_key,
         "generated_at": iso_now(),
         "sections": sections,
     }
+    return apply_manual_overrides_to_payload(payload)
 
 def evaluations_dir() -> Path:
     path = DATA_DIR / "evaluations"
@@ -2942,6 +3018,83 @@ def admin_recalculate_evaluations(
         "source_snapshot": snapshot_name,
         "saved_path": str(saved_path),
         "payload": payload,
+    }
+
+@app.get("/admin/evaluations/snapshots")
+def admin_evaluations_snapshots(admin=Depends(require_admin)):
+    json_history_dir = DATA_DIR / "history" / "json_snapshots"
+    items = [{
+        "filename": "latest.json",
+        "label": "Actual / latest.json",
+        "modified_at": datetime.fromtimestamp((DATA_DIR / "latest.json").stat().st_mtime, tz=timezone.utc).isoformat() if (DATA_DIR / "latest.json").exists() else None,
+        "is_latest": True,
+    }]
+
+    if json_history_dir.exists():
+        for file in sorted(json_history_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+            if not file.is_file():
+                continue
+            items.append({
+                "filename": file.name,
+                "label": file.name,
+                "modified_at": datetime.fromtimestamp(file.stat().st_mtime, tz=timezone.utc).isoformat(),
+                "is_latest": False,
+            })
+
+    return {"items": items}
+
+@app.post("/admin/evaluations/manual-override")
+def admin_evaluations_manual_override(payload: EvaluationManualOverrideIn, admin=Depends(require_admin)):
+    date_key = payload.date.strip()
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_key):
+        raise HTTPException(status_code=400, detail="date debe tener formato YYYY-MM-DD.")
+
+    section = payload.section.strip().lower()
+    if section not in EVALUATION_SECTIONS:
+        raise HTTPException(status_code=400, detail="Sección inválida.")
+
+    if payload.item_index < 0:
+        raise HTTPException(status_code=400, detail="item_index inválido.")
+
+    status = payload.status.strip().lower()
+    if status not in {"hit", "miss", "pending", "unknown"}:
+        raise HTTPException(status_code=400, detail="status debe ser hit, miss, pending o unknown.")
+
+    eval_path = evaluations_dir() / f"{date_key}.json"
+    evaluation_payload = load_evaluation_file(eval_path)
+    if not evaluation_payload:
+        raise HTTPException(status_code=404, detail="Primero recalcula esa fecha para crear el archivo de evaluación.")
+
+    section_items = (((evaluation_payload.get("sections") or {}).get(section) or {}).get("items") or [])
+    if payload.item_index >= len(section_items):
+        raise HTTPException(status_code=404, detail="No existe ese renglón en la evaluación.")
+
+    overrides = load_manual_overrides()
+    overrides.setdefault(date_key, {}).setdefault(section, {})[str(payload.item_index)] = {
+        "status": status,
+        "reason": payload.reason or f"Resultado marcado manualmente como {status} desde admin.",
+        "updated_at": iso_now(),
+        "updated_by": admin["user_id"],
+    }
+    save_manual_overrides(overrides)
+
+    updated_payload = apply_manual_overrides_to_payload(evaluation_payload)
+    save_evaluation_payload(updated_payload)
+
+    write_admin_log(
+        admin_user_id=admin["user_id"],
+        action="manual_evaluation_override",
+        details=f"date={date_key} section={section} item_index={payload.item_index} status={status}"
+    )
+
+    return {
+        "status": "ok",
+        "message": "Resultado manual guardado correctamente.",
+        "date": date_key,
+        "section": section,
+        "item_index": payload.item_index,
+        "manual_status": status,
+        "payload": updated_payload,
     }
 
 @app.get("/api/evaluations/day/{date_key}")

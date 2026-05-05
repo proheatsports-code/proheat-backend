@@ -507,6 +507,10 @@
 
           <div class="toolbar">
             <input type="date" id="evaluationDate" style="max-width: 220px; margin-bottom:0;" />
+            <select id="evaluationSnapshot" class="action-select" aria-label="Snapshot histórico">
+              <option value="latest.json">Actual / latest.json</option>
+            </select>
+            <button class="btn btn-secondary" onclick="loadEvaluationSnapshots()">Actualizar snapshots</button>
             <button class="btn btn-primary" onclick="recalculateEvaluations()">Recalcular resultados</button>
             <button class="btn btn-secondary" onclick="loadEvaluationsDashboard()">Ver dashboard resultados</button>
           </div>
@@ -532,6 +536,7 @@
 
   <script>
     const API_BASE = window.location.origin;
+    let currentEvaluationDate = "";
 
     function getAdminToken() {
       return localStorage.getItem("proheat_admin_token") || "";
@@ -1133,7 +1138,31 @@
       return String(dateStr).slice(0, 10);
     }
 
-    function renderEvaluationSummaryBlock(label, data) {
+    function formatEvaluationPick(row) {
+      const evaluations = row?.evaluations || [];
+      if (evaluations.length) {
+        return evaluations.map(ev => `${ev.field || "pick"}: ${ev.prediction || ""}`).join("\n");
+      }
+      return row?.pick || row?.prediccion || row?.prediction || row?.reason || "N/A";
+    }
+
+    function formatEvaluationScore(row) {
+      const score = row?.score || null;
+      if (score && score.home_team && score.away_team) {
+        return `${score.home_team} ${score.home_goals}-${score.away_goals} ${score.away_team}`;
+      }
+      return row?.resultado || row?.result || row?.reason || "Pendiente";
+    }
+
+    function manualStatusLabel(status) {
+      if (status === "hit") return "Acierto";
+      if (status === "miss") return "Error";
+      if (status === "pending") return "Pendiente";
+      if (status === "unknown") return "Sin evaluar";
+      return status;
+    }
+
+    function renderEvaluationSummaryBlock(label, data, sectionKey) {
       const day = data?.day || {};
       const cumulative = data?.cumulative || {};
       const topTeams = cumulative.top_teams || data?.top_teams || [];
@@ -1162,16 +1191,25 @@
       if (dayRows.length) {
         rowsHtml = `
           <h3 style="margin-top:18px;">Detalle del último cálculo</h3>
-          <table style="min-width:900px;"><thead><tr>
-            <th>Partido</th><th>Pick</th><th>Resultado</th><th>Estado</th><th>Mercado</th>
+          <table style="min-width:1150px;"><thead><tr>
+            <th>#</th><th>Partido</th><th>Pick / Razón</th><th>Resultado</th><th>Estado</th><th>Mercado</th><th>Manual</th>
           </tr></thead><tbody>
-            ${dayRows.slice(0, 30).map(r => `
+            ${dayRows.slice(0, 30).map((r, idx) => `
               <tr>
+                <td>${idx + 1}</td>
                 <td>${escapeHtml(r.partido || r.match || "")}</td>
-                <td>${escapeHtml(r.pick || r.prediccion || r.prediction || "")}</td>
-                <td>${escapeHtml(r.resultado || r.result || r.score || "")}</td>
-                <td>${statusPill(r.status || r.estado || "")}</td>
-                <td>${escapeHtml(r.market || r.mercado || "")}</td>
+                <td style="white-space:pre-wrap;">${escapeHtml(formatEvaluationPick(r))}</td>
+                <td>${escapeHtml(formatEvaluationScore(r))}</td>
+                <td>${statusPill(r.status || r.estado || "")}${r.manual_override ? `<br><span class="small">Manual</span>` : ""}</td>
+                <td>${escapeHtml(r.market || r.mercado || r.section_label || "")}</td>
+                <td>
+                  <div class="action-group">
+                    <button class="btn btn-secondary" onclick="setEvaluationManualStatus('${sectionKey}', ${idx}, 'hit')">Acierto</button>
+                    <button class="btn btn-danger" onclick="setEvaluationManualStatus('${sectionKey}', ${idx}, 'miss')">Error</button>
+                    <button class="btn btn-secondary" onclick="setEvaluationManualStatus('${sectionKey}', ${idx}, 'pending')">Pendiente</button>
+                    <button class="btn btn-secondary" onclick="setEvaluationManualStatus('${sectionKey}', ${idx}, 'unknown')">Sin evaluar</button>
+                  </div>
+                </td>
               </tr>
             `).join("")}
           </tbody></table>
@@ -1182,9 +1220,10 @@
         <div class="summary-box" style="margin-bottom:18px;">
           <h2 style="color:orange;margin-top:0;">${escapeHtml(label)}</h2>
           <div class="metric-grid">
-            <div class="metric-card"><div class="small">Día anterior · Aciertos</div><div class="metric-value">${escapeHtml(day.wins ?? day.aciertos ?? 0)}</div></div>
-            <div class="metric-card"><div class="small">Día anterior · Errores</div><div class="metric-value">${escapeHtml(day.losses ?? day.errores ?? 0)}</div></div>
-            <div class="metric-card"><div class="small">Día anterior · Efectividad</div><div class="metric-value">${formatPct(day.hit_rate ?? day.efectividad ?? 0)}</div></div>
+            <div class="metric-card"><div class="small">Día · Aciertos</div><div class="metric-value">${escapeHtml(day.wins ?? day.aciertos ?? 0)}</div></div>
+            <div class="metric-card"><div class="small">Día · Errores</div><div class="metric-value">${escapeHtml(day.losses ?? day.errores ?? 0)}</div></div>
+            <div class="metric-card"><div class="small">Día · Pendientes</div><div class="metric-value">${escapeHtml(day.pending ?? 0)}</div></div>
+            <div class="metric-card"><div class="small">Día · Efectividad</div><div class="metric-value">${formatPct(day.hit_rate ?? day.efectividad ?? 0)}</div></div>
             <div class="metric-card"><div class="small">Acumulado · Efectividad</div><div class="metric-value">${formatPct(cumulative.hit_rate ?? cumulative.efectividad ?? 0)}</div></div>
           </div>
           ${topTeamsHtml}
@@ -1193,30 +1232,59 @@
       `;
     }
 
+    async function loadEvaluationSnapshots() {
+      const select = document.getElementById("evaluationSnapshot");
+      if (!select) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/evaluations/snapshots`, {
+          headers: getAdminHeaders(false)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("actionMessage", data.detail || "No se pudieron cargar los snapshots.", "error");
+          return;
+        }
+
+        const currentValue = select.value || "latest.json";
+        const items = data.items || [];
+        select.innerHTML = items.map(item => `
+          <option value="${escapeHtml(item.filename)}">${escapeHtml(item.label || item.filename)}</option>
+        `).join("");
+
+        if ([...select.options].some(opt => opt.value === currentValue)) {
+          select.value = currentValue;
+        }
+      } catch (error) {
+        showMessage("actionMessage", `Error cargando snapshots: ${error}`, "error");
+      }
+    }
+
     async function recalculateEvaluations() {
       const dateValue = document.getElementById("evaluationDate").value;
+      const snapshotValue = document.getElementById("evaluationSnapshot")?.value || "latest.json";
 
       if (!dateValue) {
         showMessage("actionMessage", "Selecciona una fecha válida para recalcular resultados.", "error");
         return;
       }
 
-      if (!confirm(`¿Recalcular resultados para ${dateValue}?`)) return;
+      if (!confirm(`¿Recalcular resultados para ${dateValue} usando ${snapshotValue}?`)) return;
 
       const formData = new FormData();
       formData.append("date", dateValue);
+      if (snapshotValue && snapshotValue !== "latest.json") {
+        formData.append("history_filename", snapshotValue);
+      }
 
       try {
         showMessage("actionMessage", "Consultando API-Football y recalculando resultados...", "warning");
-
         const response = await fetch(`${API_BASE}/admin/evaluations/recalculate`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${getAdminToken()}`
-          },
+          headers: { "Authorization": `Bearer ${getAdminToken()}` },
           body: formData
         });
-
         const data = await response.json();
 
         if (!response.ok) {
@@ -1232,6 +1300,45 @@
         }
 
         showMessage("actionMessage", data.message || "Evaluaciones recalculadas correctamente.", "success");
+        currentEvaluationDate = dateValue;
+        loadEvaluationsDashboard();
+      } catch (error) {
+        showMessage("actionMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
+    async function setEvaluationManualStatus(sectionKey, itemIndex, status) {
+      const dateValue = currentEvaluationDate || document.getElementById("evaluationDate")?.value;
+      if (!dateValue) {
+        showMessage("actionMessage", "Selecciona o carga una fecha de evaluación antes de marcar manualmente.", "error");
+        return;
+      }
+
+      const label = manualStatusLabel(status);
+      const reason = prompt(`Motivo opcional para marcar como ${label}:`, `Marcado manualmente como ${label} desde admin.`);
+      if (reason === null) return;
+
+      try {
+        showMessage("actionMessage", "Guardando resultado manual...", "warning");
+        const response = await fetch(`${API_BASE}/admin/evaluations/manual-override`, {
+          method: "POST",
+          headers: getAdminHeaders(true),
+          body: JSON.stringify({
+            date: dateValue,
+            section: sectionKey,
+            item_index: Number(itemIndex),
+            status,
+            reason
+          })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("actionMessage", data.detail || "No se pudo guardar el resultado manual.", "error");
+          return;
+        }
+
+        showMessage("actionMessage", data.message || "Resultado manual guardado.", "success");
         loadEvaluationsDashboard();
       } catch (error) {
         showMessage("actionMessage", `Error de conexión: ${error}`, "error");
@@ -1258,15 +1365,17 @@
           inferno: "Combinadas Inferno (Hoja9)"
         };
 
+        currentEvaluationDate = formatEvalDate(data.date || data.evaluation_date || data.latest_date || currentEvaluationDate || "");
+
         let html = `
           <div class="summary-box">
-            <strong>Última evaluación:</strong> ${escapeHtml(formatEvalDate(data.date || data.evaluation_date || data.latest_date || ""))}<br>
-            <span class="small">Este dashboard evalúa solo Hoja2, Hoja8, Hoja4 y Hoja9.</span>
+            <strong>Última evaluación:</strong> ${escapeHtml(currentEvaluationDate)}<br>
+            <span class="small">Este dashboard evalúa solo Hoja2, Hoja8, Hoja4 y Hoja9. Puedes marcar manualmente acierto/error cuando la API no cierre el resultado.</span>
           </div>
         `;
 
         ["ultra", "public", "combinadas", "inferno"].forEach(key => {
-          html += renderEvaluationSummaryBlock(labels[key], sections[key] || {});
+          html += renderEvaluationSummaryBlock(labels[key], sections[key] || {}, key);
         });
 
         setTable("Dashboard Resultados", html);
@@ -1677,7 +1786,10 @@
     function restoreAdminSession() {
       const session = getSavedSession();
       setSessionUI(session);
-      if (session) loadPendingRequests();
+      if (session) {
+        loadPendingRequests();
+        loadEvaluationSnapshots();
+      }
     }
 
     document.getElementById("videopickFile").addEventListener("change", () => previewVideoFile("videopickFile", "videopickPreview"));
