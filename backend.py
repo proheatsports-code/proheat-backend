@@ -393,6 +393,17 @@ class EvaluationManualOverrideIn(BaseModel):
     status: str
     reason: Optional[str] = None
 
+class EvaluationManualResultIn(BaseModel):
+    date: str
+    section: str
+    partido: str
+    pick: Optional[str] = None
+    resultado: Optional[str] = None
+    status: str
+    reason: Optional[str] = None
+    hora: Optional[str] = None
+    liga: Optional[str] = None
+
 # =========================
 # AUTH HELPERS
 # =========================
@@ -2950,7 +2961,11 @@ def load_evaluation_file(path: Path) -> Optional[dict[str, Any]]:
         return None
 
 def latest_evaluation_payload() -> Optional[dict[str, Any]]:
-    files = sorted(evaluations_dir().glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    files = sorted(
+        [p for p in evaluations_dir().glob("*.json") if p.name != "manual_overrides.json"],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
     for file in files:
         data = load_evaluation_file(file)
         if data:
@@ -2966,7 +2981,7 @@ def cumulative_evaluations_payload() -> dict[str, Any]:
         }
         for section, label in EVALUATION_SECTIONS.items()
     }
-    files = sorted(evaluations_dir().glob("*.json"))
+    files = sorted([p for p in evaluations_dir().glob("*.json") if p.name != "manual_overrides.json"])
     for file in files:
         data = load_evaluation_file(file)
         if not data:
@@ -3095,6 +3110,91 @@ def admin_evaluations_manual_override(payload: EvaluationManualOverrideIn, admin
         "item_index": payload.item_index,
         "manual_status": status,
         "payload": updated_payload,
+    }
+
+@app.post("/admin/evaluations/manual-result")
+def admin_evaluations_manual_result(payload: EvaluationManualResultIn, admin=Depends(require_admin)):
+    date_key = payload.date.strip()
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_key):
+        raise HTTPException(status_code=400, detail="date debe tener formato YYYY-MM-DD.")
+
+    section = payload.section.strip().lower()
+    if section not in EVALUATION_SECTIONS:
+        raise HTTPException(status_code=400, detail="Sección inválida.")
+
+    status = payload.status.strip().lower()
+    if status not in {"hit", "miss", "pending", "unknown"}:
+        raise HTTPException(status_code=400, detail="status debe ser hit, miss, pending o unknown.")
+
+    partido = payload.partido.strip()
+    if not partido:
+        raise HTTPException(status_code=400, detail="partido es requerido.")
+
+    eval_path = evaluations_dir() / f"{date_key}.json"
+    evaluation_payload = load_evaluation_file(eval_path)
+
+    if not evaluation_payload:
+        evaluation_payload = {
+            "date": date_key,
+            "generated_at": iso_now(),
+            "source_snapshot": "manual",
+            "sections": {
+                key: {"label": label, "summary": summarize_evaluations([]), "items": []}
+                for key, label in EVALUATION_SECTIONS.items()
+            },
+        }
+
+    sections = evaluation_payload.setdefault("sections", {})
+    section_payload = sections.setdefault(
+        section,
+        {"label": EVALUATION_SECTIONS.get(section, section), "summary": summarize_evaluations([]), "items": []}
+    )
+    items = section_payload.setdefault("items", [])
+
+    reason = payload.reason or f"Resultado capturado manualmente como {status}."
+    manual_item = {
+        "section": section,
+        "section_label": EVALUATION_SECTIONS.get(section, section),
+        "hora": payload.hora,
+        "liga": payload.liga,
+        "partido": partido,
+        "status": status,
+        "score": None,
+        "manual_result": True,
+        "manual_override": True,
+        "manual_override_at": iso_now(),
+        "manual_override_by": admin["user_id"],
+        "reason": reason,
+        "resultado_manual": payload.resultado,
+        "evaluations": [{
+            "field": "manual",
+            "prediction": payload.pick or partido,
+            "status": status,
+            "reason": reason,
+        }] if status in {"hit", "miss"} else [],
+    }
+
+    items.append(manual_item)
+    section_payload["items"] = items
+    section_payload["summary"] = summarize_evaluations(items)
+    evaluation_payload["sections"] = sections
+    evaluation_payload["generated_at"] = iso_now()
+
+    saved_path = save_evaluation_payload(evaluation_payload)
+
+    write_admin_log(
+        admin_user_id=admin["user_id"],
+        action="manual_evaluation_result",
+        details=f"date={date_key} section={section} status={status} partido={partido} saved={saved_path.name}"
+    )
+
+    return {
+        "status": "ok",
+        "message": "Resultado manual agregado correctamente.",
+        "date": date_key,
+        "section": section,
+        "manual_status": status,
+        "payload": evaluation_payload,
     }
 
 @app.get("/api/evaluations/day/{date_key}")
