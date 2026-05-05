@@ -1208,7 +1208,14 @@
         const data = await response.json();
 
         if (!response.ok) {
-          showMessage("actionMessage", data.detail || "No se pudieron recalcular las evaluaciones.", "error");
+          const errorText =
+            typeof data.detail === "string"
+              ? data.detail
+              : data.message
+                ? data.message
+                : JSON.stringify(data, null, 2);
+
+          showMessage("actionMessage", errorText || "No se pudieron recalcular las evaluaciones.", "error");
           return;
         }
 
