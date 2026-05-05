@@ -1203,15 +1203,20 @@
 
       if (!confirm(`¿Recalcular resultados para ${dateValue}?`)) return;
 
+      const formData = new FormData();
+      formData.append("date", dateValue);
+
       try {
         showMessage("actionMessage", "Consultando API-Football y recalculando resultados...", "warning");
+
         const response = await fetch(`${API_BASE}/admin/evaluations/recalculate`, {
           method: "POST",
-          headers: getAdminHeaders(true),
-          body: JSON.stringify({
-            date: dateValue
-          })
+          headers: {
+            "Authorization": `Bearer ${getAdminToken()}`
+          },
+          body: formData
         });
+
         const data = await response.json();
 
         if (!response.ok) {
