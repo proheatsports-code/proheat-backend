@@ -9,6 +9,7 @@ import base64
 import shutil
 import re
 import unicodedata
+from difflib import SequenceMatcher
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Any
@@ -2373,6 +2374,62 @@ EVALUATION_SECTIONS = {
 
 FINISHED_FIXTURE_STATUSES = {"FT", "AET", "PEN"}
 
+# Alias y normalizaciones para mejorar el emparejamiento contra API-Football.
+# La API puede usar nombres oficiales distintos a los que cargamos en Excel.
+TEAM_ALIASES = {
+    "idv": "independiente del valle",
+    "ind del valle": "independiente del valle",
+    "independiente dv": "independiente del valle",
+    "independiente valle": "independiente del valle",
+    "atletico madrid": "atletico madrid",
+    "atletico de madrid": "atletico madrid",
+    "a madrid": "atletico madrid",
+    "arsenal": "arsenal",
+    "rosario central": "rosario central",
+    "libertad": "libertad asuncion",
+    "libertad asuncion": "libertad asuncion",
+    "sporting cristal": "sporting cristal",
+    "palmeiras": "palmeiras",
+    "tigres": "tigres uanl",
+    "tigres uanl": "tigres uanl",
+    "nashville": "nashville sc",
+    "nashville sc": "nashville sc",
+    "recoleta": "deportivo recoleta",
+    "deportivo recoleta": "deportivo recoleta",
+    "santos": "santos",
+    "universidad central": "universidad central",
+    "ucv": "universidad central",
+    "man utd": "manchester united",
+    "man united": "manchester united",
+    "man city": "manchester city",
+    "athletic bilbao": "athletic club",
+    "sporting cp": "sporting",
+    "psg": "paris saint germain",
+    "bayern munich": "bayern munich",
+    "bayern munchen": "bayern munich",
+    "inter": "inter milan",
+    "ac milan": "milan",
+    "roma": "as roma",
+    "spurs": "tottenham",
+}
+
+LEAGUE_ALIASES = {
+    "champions": "uefa champions league",
+    "champions sf": "uefa champions league",
+    "uefa champions": "uefa champions league",
+    "uefa champions league": "uefa champions league",
+    "libertadores": "conmebol libertadores",
+    "copa libertadores": "conmebol libertadores",
+    "conmebol libertadores": "conmebol libertadores",
+    "sudamericana": "conmebol sudamericana",
+    "copa sudamericana": "conmebol sudamericana",
+    "conmebol sudamericana": "conmebol sudamericana",
+    "concachampions": "concacaf champions cup",
+    "concacaf champions": "concacaf champions cup",
+    "concacaf champions cup": "concacaf champions cup",
+    "concacaf champions league": "concacaf champions cup",
+}
+
 def normalize_text(value: Any) -> str:
     text = str(value or "").strip().lower()
     text = unicodedata.normalize("NFKD", text)
@@ -2384,22 +2441,14 @@ def normalize_text(value: Any) -> str:
 
 def canonical_team_name(name: str) -> str:
     text = normalize_text(name)
-    replacements = {
-        "man utd": "manchester united",
-        "man united": "manchester united",
-        "man city": "manchester city",
-        "atletico madrid": "atletico de madrid",
-        "athletic bilbao": "athletic club",
-        "sporting cp": "sporting",
-        "psg": "paris saint germain",
-        "bayern munich": "bayern munchen",
-        "bayern munchen": "bayern munich",
-        "inter": "inter milan",
-        "ac milan": "milan",
-        "roma": "as roma",
-        "spurs": "tottenham",
-    }
-    return replacements.get(text, text)
+    text = re.sub(r"\b(fc|cf|sc|ac|cd|club|deportivo|club de futbol)\b", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return TEAM_ALIASES.get(text, text)
+
+def canonical_league_name(name: str) -> str:
+    text = normalize_text(name)
+    text = text.replace("semi finals", "sf").replace("semifinal", "sf")
+    return LEAGUE_ALIASES.get(text, text)
 
 def split_match_name(match_name: str) -> tuple[str, str]:
     raw = str(match_name or "")
@@ -2410,6 +2459,24 @@ def split_match_name(match_name: str) -> tuple[str, str]:
             return parts[0].strip(), parts[1].strip()
     return raw.strip(), ""
 
+def string_similarity(a: str, b: str) -> float:
+    a_norm = normalize_text(a)
+    b_norm = normalize_text(b)
+    if not a_norm or not b_norm:
+        return 0.0
+    if a_norm == b_norm:
+        return 1.0
+    if a_norm in b_norm or b_norm in a_norm:
+        return 0.92
+    return SequenceMatcher(None, a_norm, b_norm).ratio()
+
+def token_similarity(a: str, b: str) -> float:
+    a_tokens = set(normalize_text(a).split())
+    b_tokens = set(normalize_text(b).split())
+    if not a_tokens or not b_tokens:
+        return 0.0
+    return len(a_tokens & b_tokens) / max(len(a_tokens), len(b_tokens))
+
 def team_similarity(a: str, b: str) -> float:
     a_norm = canonical_team_name(a)
     b_norm = canonical_team_name(b)
@@ -2418,32 +2485,103 @@ def team_similarity(a: str, b: str) -> float:
     if a_norm == b_norm:
         return 1.0
     if a_norm in b_norm or b_norm in a_norm:
-        return 0.92
-    a_tokens = set(a_norm.split())
-    b_tokens = set(b_norm.split())
-    if not a_tokens or not b_tokens:
-        return 0.0
-    return len(a_tokens & b_tokens) / max(len(a_tokens), len(b_tokens))
+        return 0.95
+    seq = string_similarity(a_norm, b_norm)
+    tok = token_similarity(a_norm, b_norm)
+    # Fuzzy ponderado: tolera nombres incompletos, siglas y pequeñas variaciones.
+    return max(seq * 0.72 + tok * 0.28, tok)
 
-def match_fixture_for_pick(match_name: str, fixtures: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
+def league_similarity(a: str, b: str) -> float:
+    a_norm = canonical_league_name(a)
+    b_norm = canonical_league_name(b)
+    if not a_norm or not b_norm:
+        return 0.0
+    if a_norm == b_norm:
+        return 1.0
+    if a_norm in b_norm or b_norm in a_norm:
+        return 0.92
+    seq = string_similarity(a_norm, b_norm)
+    tok = token_similarity(a_norm, b_norm)
+    return max(seq * 0.65 + tok * 0.35, tok)
+
+def get_fixture_league_name(fixture: dict[str, Any]) -> str:
+    league = fixture.get("league", {}) or {}
+    return str(league.get("name") or league.get("round") or "")
+
+def match_fixture_for_pick(match_name: str, fixtures: list[dict[str, Any]], pick_league: str = "") -> Optional[dict[str, Any]]:
     pick_home, pick_away = split_match_name(match_name)
-    if not pick_home or not pick_away:
+    pick_league_norm = canonical_league_name(pick_league)
+
+    if not pick_home and not pick_away:
         return None
 
     best_fixture = None
     best_score = 0.0
+    best_debug: dict[str, Any] = {}
+
     for fixture in fixtures:
         teams = fixture.get("teams", {}) or {}
         home = (teams.get("home") or {}).get("name", "")
         away = (teams.get("away") or {}).get("name", "")
-        direct = (team_similarity(pick_home, home) + team_similarity(pick_away, away)) / 2
-        reversed_score = (team_similarity(pick_home, away) + team_similarity(pick_away, home)) / 2
-        score = max(direct, reversed_score * 0.96)
-        if score > best_score:
-            best_score = score
-            best_fixture = fixture
+        fixture_league = get_fixture_league_name(fixture)
+        lsim = league_similarity(pick_league_norm, fixture_league) if pick_league_norm else 0.0
 
-    return best_fixture if best_score >= 0.55 else None
+        home_home = team_similarity(pick_home, home) if pick_home else 0.0
+        away_away = team_similarity(pick_away, away) if pick_away else 0.0
+        home_away = team_similarity(pick_home, away) if pick_home else 0.0
+        away_home = team_similarity(pick_away, home) if pick_away else 0.0
+
+        direct = (home_home + away_away) / 2 if pick_home and pick_away else max(home_home, away_away)
+        reversed_score = (home_away + away_home) / 2 if pick_home and pick_away else max(home_away, away_home)
+        team_score = max(direct, reversed_score * 0.96)
+        one_team_score = max(home_home, away_away, home_away, away_home)
+
+        # Score principal: equipos pesan más; liga ayuda a confirmar cuando hay múltiples opciones.
+        combined = (team_score * 0.78) + (lsim * 0.22 if pick_league_norm else 0.0)
+
+        # Fallback pedido: si coinciden fecha + liga + un solo equipo, tomar ese partido.
+        # Fecha ya está implícita porque fixtures viene filtrado por date_key.
+        if lsim >= 0.58 and one_team_score >= 0.68:
+            combined = max(combined, 0.72 + (one_team_score * 0.18) + (lsim * 0.10))
+
+        # Fallback adicional: si ambos equipos son bastante parecidos aunque la liga venga distinta.
+        if team_score >= 0.62:
+            combined = max(combined, team_score)
+
+        if combined > best_score:
+            best_score = combined
+            best_fixture = fixture
+            best_debug = {
+                "confidence": round(combined, 3),
+                "team_score": round(team_score, 3),
+                "one_team_score": round(one_team_score, 3),
+                "league_score": round(lsim, 3),
+                "pick_home": pick_home,
+                "pick_away": pick_away,
+                "fixture_home": home,
+                "fixture_away": away,
+                "pick_league": pick_league,
+                "fixture_league": fixture_league,
+            }
+
+    if not best_fixture:
+        return None
+
+    # Umbrales flexibles:
+    # - dos equipos: aceptamos fuzzy medio/alto.
+    # - un equipo + liga: aceptamos aunque el segundo nombre no coincida.
+    team_ok = best_debug.get("team_score", 0) >= 0.54
+    one_team_league_ok = best_debug.get("one_team_score", 0) >= 0.68 and best_debug.get("league_score", 0) >= 0.58
+    combined_ok = best_debug.get("confidence", 0) >= 0.60
+
+    if combined_ok and (team_ok or one_team_league_ok):
+        try:
+            best_fixture["_proheat_match"] = best_debug
+        except Exception:
+            pass
+        return best_fixture
+
+    return None
 
 def football_api_get_fixtures(date_key: str) -> list[dict[str, Any]]:
     if not API_FOOTBALL_KEY:
@@ -2618,16 +2756,20 @@ def evaluate_row(section: str, row: dict[str, Any], fixtures: list[dict[str, Any
         "evaluations": [],
     }
 
-    fixture = match_fixture_for_pick(match_name, fixtures)
+    fixture = match_fixture_for_pick(match_name, fixtures, str(base.get("liga") or ""))
     if not fixture:
         base["status"] = "pending"
         base["reason"] = "Partido no encontrado en API-Football"
         return base
 
+    match_info = fixture.get("_proheat_match") if isinstance(fixture, dict) else None
+    if match_info:
+        base["match_info"] = match_info
+
     score = fixture_score(fixture)
     if not score:
         base["status"] = "pending"
-        base["reason"] = "Partido encontrado, pero aún no tiene resultado final"
+        base["reason"] = "Partido encontrado por fuzzy, liga o equipo, pero aún no tiene resultado final"
         return base
 
     base["score"] = score
@@ -2819,58 +2961,10 @@ def api_evaluations_cumulative():
 def api_evaluations_frontend():
     latest = latest_evaluation_payload()
     cumulative = cumulative_evaluations_payload()
-
-    latest_sections = (latest or {}).get("sections", {}) or {}
-    cumulative_sections = (cumulative or {}).get("sections", {}) or {}
-
-    frontend_sections: dict[str, Any] = {}
-
-    for section, label in EVALUATION_SECTIONS.items():
-        day_section = latest_sections.get(section, {}) or {}
-        cumulative_section = cumulative_sections.get(section, {}) or {}
-
-        day_summary = day_section.get("summary", {}) or {}
-        cumulative_summary = cumulative_section.get("summary", {}) or {}
-
-        frontend_sections[section] = {
-            "label": label,
-            "day": {
-                "wins": int(day_summary.get("hits", 0) or 0),
-                "aciertos": int(day_summary.get("hits", 0) or 0),
-                "losses": int(day_summary.get("misses", 0) or 0),
-                "errores": int(day_summary.get("misses", 0) or 0),
-                "pending": int(day_summary.get("pending", 0) or 0),
-                "unknown": int(day_summary.get("unknown", 0) or 0),
-                "total": int(day_summary.get("total", 0) or 0),
-                "decided": int(day_summary.get("decided", 0) or 0),
-                "hit_rate": float(day_summary.get("effectiveness_pct", 0) or 0),
-                "efectividad": float(day_summary.get("effectiveness_pct", 0) or 0),
-                "items": day_section.get("items", []) if isinstance(day_section.get("items", []), list) else [],
-            },
-            "cumulative": {
-                "wins": int(cumulative_summary.get("hits", 0) or 0),
-                "aciertos": int(cumulative_summary.get("hits", 0) or 0),
-                "losses": int(cumulative_summary.get("misses", 0) or 0),
-                "errores": int(cumulative_summary.get("misses", 0) or 0),
-                "pending": int(cumulative_summary.get("pending", 0) or 0),
-                "unknown": int(cumulative_summary.get("unknown", 0) or 0),
-                "total": int(cumulative_summary.get("total", 0) or 0),
-                "decided": int(cumulative_summary.get("decided", 0) or 0),
-                "hit_rate": float(cumulative_summary.get("effectiveness_pct", 0) or 0),
-                "efectividad": float(cumulative_summary.get("effectiveness_pct", 0) or 0),
-                "daily": cumulative_section.get("daily", []) if isinstance(cumulative_section.get("daily", []), list) else [],
-            },
-            "items": day_section.get("items", []) if isinstance(day_section.get("items", []), list) else [],
-        }
-
     return {
-        "date": (latest or {}).get("date"),
-        "evaluation_date": (latest or {}).get("date"),
-        "latest_date": (latest or {}).get("date"),
-        "generated_at": (latest or {}).get("generated_at"),
         "latest": latest,
         "cumulative": cumulative,
-        "sections": frontend_sections,
+        "sections": EVALUATION_SECTIONS,
     }
 
 # =========================
