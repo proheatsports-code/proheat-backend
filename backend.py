@@ -2961,10 +2961,61 @@ def api_evaluations_cumulative():
 def api_evaluations_frontend():
     latest = latest_evaluation_payload()
     cumulative = cumulative_evaluations_payload()
+
+    latest_sections = (latest or {}).get("sections", {}) or {}
+    cumulative_sections = (cumulative or {}).get("sections", {}) or {}
+
+    frontend_sections: dict[str, Any] = {}
+
+    for key, label in EVALUATION_SECTIONS.items():
+        day_section = latest_sections.get(key, {}) or {}
+        cumulative_section = cumulative_sections.get(key, {}) or {}
+
+        day_summary = day_section.get("summary", {}) or {}
+        cumulative_summary = cumulative_section.get("summary", {}) or {}
+        day_items = day_section.get("items", []) or []
+
+        frontend_sections[key] = {
+            "label": label,
+            "day": {
+                "wins": day_summary.get("hits", 0),
+                "aciertos": day_summary.get("hits", 0),
+                "losses": day_summary.get("misses", 0),
+                "errores": day_summary.get("misses", 0),
+                "pending": day_summary.get("pending", 0),
+                "unknown": day_summary.get("unknown", 0),
+                "total": day_summary.get("total", 0),
+                "decided": day_summary.get("decided", 0),
+                "hit_rate": day_summary.get("effectiveness_pct", 0),
+                "efectividad": day_summary.get("effectiveness_pct", 0),
+                "items": day_items,
+            },
+            "cumulative": {
+                "wins": cumulative_summary.get("hits", 0),
+                "aciertos": cumulative_summary.get("hits", 0),
+                "losses": cumulative_summary.get("misses", 0),
+                "errores": cumulative_summary.get("misses", 0),
+                "pending": cumulative_summary.get("pending", 0),
+                "unknown": cumulative_summary.get("unknown", 0),
+                "total": cumulative_summary.get("total", 0),
+                "decided": cumulative_summary.get("decided", 0),
+                "hit_rate": cumulative_summary.get("effectiveness_pct", 0),
+                "efectividad": cumulative_summary.get("effectiveness_pct", 0),
+                "daily": cumulative_section.get("daily", []) or [],
+            },
+            "items": day_items,
+        }
+
+    latest_date = (latest or {}).get("date")
+
     return {
+        "date": latest_date,
+        "evaluation_date": latest_date,
+        "latest_date": latest_date,
+        "generated_at": (latest or {}).get("generated_at"),
         "latest": latest,
         "cumulative": cumulative,
-        "sections": EVALUATION_SECTIONS,
+        "sections": frontend_sections,
     }
 
 # =========================
