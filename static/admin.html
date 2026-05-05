@@ -515,6 +515,43 @@
             <button class="btn btn-secondary" onclick="loadEvaluationsDashboard()">Ver dashboard resultados</button>
           </div>
 
+          <div class="summary-box">
+            <strong>Agregar resultado manual completo</strong>
+            <div class="small" style="margin:6px 0 12px;">
+              Úsalo cuando API-Football no encuentre el partido o quieras cargar un resultado totalmente manual.
+            </div>
+
+            <div class="toolbar">
+              <select id="manualResultSection" class="action-select" aria-label="Sección manual">
+                <option value="ultra">Predicciones Ultrafiltradas</option>
+                <option value="public">Predicciones Simples</option>
+                <option value="combinadas">Combinadas IA</option>
+                <option value="inferno">Combinadas Inferno</option>
+              </select>
+              <select id="manualResultStatus" class="action-select" aria-label="Estado manual">
+                <option value="hit">Acierto</option>
+                <option value="miss">Error</option>
+                <option value="pending">Pendiente</option>
+                <option value="unknown">Sin evaluar</option>
+              </select>
+            </div>
+
+            <div class="toolbar">
+              <input type="text" id="manualResultHora" placeholder="Hora, ej. 4:00 p.m." style="max-width: 160px; margin-bottom:0;" />
+              <input type="text" id="manualResultLiga" placeholder="Liga" style="max-width: 220px; margin-bottom:0;" />
+              <input type="text" id="manualResultPartido" placeholder="Partido, ej. Arsenal vs Atlético Madrid" style="max-width: 360px; margin-bottom:0;" />
+            </div>
+
+            <div class="toolbar">
+              <input type="text" id="manualResultPick" placeholder="Pick / predicción" style="max-width: 360px; margin-bottom:0;" />
+              <input type="text" id="manualResultScore" placeholder="Resultado, ej. Arsenal 2-1 Atlético Madrid" style="max-width: 360px; margin-bottom:0;" />
+            </div>
+
+            <textarea id="manualResultReason" placeholder="Motivo o nota opcional..." style="min-height:72px;"></textarea>
+
+            <button class="btn btn-primary" onclick="addManualEvaluationResult()">Agregar resultado manual</button>
+          </div>
+
           <div id="actionMessage" class="message hidden"></div>
         </div>
 
@@ -849,8 +886,8 @@
       if (s === "expired") return `<span class="pill pill-red">expired</span>`;
       if (s === "reviewed") return `<span class="pill pill-green">reviewed</span>`;
       if (s === "inactive") return `<span class="pill pill-red">inactive</span>`;
-      if (s === "win" || s === "acierto") return `<span class="pill pill-green">acierto</span>`;
-      if (s === "loss" || s === "error") return `<span class="pill pill-red">error</span>`;
+      if (s === "win" || s === "acierto" || s === "hit") return `<span class="pill pill-green">acierto</span>`;
+      if (s === "loss" || s === "error" || s === "miss") return `<span class="pill pill-red">error</span>`;
       if (s === "push") return `<span class="pill pill-yellow">push</span>`;
       return `<span class="pill">${escapeHtml(status || "N/A")}</span>`;
     }
@@ -1339,6 +1376,69 @@
         }
 
         showMessage("actionMessage", data.message || "Resultado manual guardado.", "success");
+        loadEvaluationsDashboard();
+      } catch (error) {
+        showMessage("actionMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
+    async function addManualEvaluationResult() {
+      const dateValue = currentEvaluationDate || document.getElementById("evaluationDate")?.value;
+      const section = document.getElementById("manualResultSection")?.value || "ultra";
+      const status = document.getElementById("manualResultStatus")?.value || "hit";
+      const hora = document.getElementById("manualResultHora")?.value.trim() || "";
+      const liga = document.getElementById("manualResultLiga")?.value.trim() || "";
+      const partido = document.getElementById("manualResultPartido")?.value.trim() || "";
+      const pick = document.getElementById("manualResultPick")?.value.trim() || "";
+      const resultado = document.getElementById("manualResultScore")?.value.trim() || "";
+      const reason = document.getElementById("manualResultReason")?.value.trim() || `Resultado capturado manualmente como ${manualStatusLabel(status)} desde admin.`;
+
+      if (!dateValue) {
+        showMessage("actionMessage", "Selecciona una fecha de evaluación antes de agregar el resultado manual.", "error");
+        return;
+      }
+
+      if (!partido) {
+        showMessage("actionMessage", "Escribe el partido para agregar el resultado manual.", "error");
+        return;
+      }
+
+      if (!confirm(`¿Agregar resultado manual para ${partido} como ${manualStatusLabel(status)}?`)) return;
+
+      try {
+        showMessage("actionMessage", "Guardando resultado manual completo...", "warning");
+        const response = await fetch(`${API_BASE}/admin/evaluations/manual-result`, {
+          method: "POST",
+          headers: getAdminHeaders(true),
+          body: JSON.stringify({
+            date: dateValue,
+            section,
+            partido,
+            pick,
+            resultado,
+            status,
+            reason,
+            hora,
+            liga
+          })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage("actionMessage", data.detail || "No se pudo agregar el resultado manual.", "error");
+          return;
+        }
+
+        showMessage("actionMessage", data.message || "Resultado manual agregado correctamente.", "success");
+        currentEvaluationDate = dateValue;
+
+        document.getElementById("manualResultHora").value = "";
+        document.getElementById("manualResultLiga").value = "";
+        document.getElementById("manualResultPartido").value = "";
+        document.getElementById("manualResultPick").value = "";
+        document.getElementById("manualResultScore").value = "";
+        document.getElementById("manualResultReason").value = "";
+
         loadEvaluationsDashboard();
       } catch (error) {
         showMessage("actionMessage", `Error de conexión: ${error}`, "error");
