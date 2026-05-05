@@ -2819,10 +2819,58 @@ def api_evaluations_cumulative():
 def api_evaluations_frontend():
     latest = latest_evaluation_payload()
     cumulative = cumulative_evaluations_payload()
+
+    latest_sections = (latest or {}).get("sections", {}) or {}
+    cumulative_sections = (cumulative or {}).get("sections", {}) or {}
+
+    frontend_sections: dict[str, Any] = {}
+
+    for section, label in EVALUATION_SECTIONS.items():
+        day_section = latest_sections.get(section, {}) or {}
+        cumulative_section = cumulative_sections.get(section, {}) or {}
+
+        day_summary = day_section.get("summary", {}) or {}
+        cumulative_summary = cumulative_section.get("summary", {}) or {}
+
+        frontend_sections[section] = {
+            "label": label,
+            "day": {
+                "wins": int(day_summary.get("hits", 0) or 0),
+                "aciertos": int(day_summary.get("hits", 0) or 0),
+                "losses": int(day_summary.get("misses", 0) or 0),
+                "errores": int(day_summary.get("misses", 0) or 0),
+                "pending": int(day_summary.get("pending", 0) or 0),
+                "unknown": int(day_summary.get("unknown", 0) or 0),
+                "total": int(day_summary.get("total", 0) or 0),
+                "decided": int(day_summary.get("decided", 0) or 0),
+                "hit_rate": float(day_summary.get("effectiveness_pct", 0) or 0),
+                "efectividad": float(day_summary.get("effectiveness_pct", 0) or 0),
+                "items": day_section.get("items", []) if isinstance(day_section.get("items", []), list) else [],
+            },
+            "cumulative": {
+                "wins": int(cumulative_summary.get("hits", 0) or 0),
+                "aciertos": int(cumulative_summary.get("hits", 0) or 0),
+                "losses": int(cumulative_summary.get("misses", 0) or 0),
+                "errores": int(cumulative_summary.get("misses", 0) or 0),
+                "pending": int(cumulative_summary.get("pending", 0) or 0),
+                "unknown": int(cumulative_summary.get("unknown", 0) or 0),
+                "total": int(cumulative_summary.get("total", 0) or 0),
+                "decided": int(cumulative_summary.get("decided", 0) or 0),
+                "hit_rate": float(cumulative_summary.get("effectiveness_pct", 0) or 0),
+                "efectividad": float(cumulative_summary.get("effectiveness_pct", 0) or 0),
+                "daily": cumulative_section.get("daily", []) if isinstance(cumulative_section.get("daily", []), list) else [],
+            },
+            "items": day_section.get("items", []) if isinstance(day_section.get("items", []), list) else [],
+        }
+
     return {
+        "date": (latest or {}).get("date"),
+        "evaluation_date": (latest or {}).get("date"),
+        "latest_date": (latest or {}).get("date"),
+        "generated_at": (latest or {}).get("generated_at"),
         "latest": latest,
         "cumulative": cumulative,
-        "sections": EVALUATION_SECTIONS,
+        "sections": frontend_sections,
     }
 
 # =========================
