@@ -3252,12 +3252,44 @@ def load_snapshot_for_evaluation(history_filename: Optional[str] = None) -> tupl
         raise HTTPException(status_code=400, detail="Snapshot inválido.")
     return snapshot_path.name, data
 
-def save_evaluation_payload(payload: dict[str, Any]) -> Path:
-    date_key = payload.get("date") or datetime.now().strftime("%Y-%m-%d")
-    path = evaluations_dir() / f"{date_key}.json"
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+def evaluations_history_dir() -> Path:
+    path = evaluations_dir() / "history"
+    path.mkdir(parents=True, exist_ok=True)
     return path
+
+def safe_history_token(value: Any, fallback: str = "evaluation") -> str:
+    text = normalize_text(value or fallback)
+    text = re.sub(r"[^a-z0-9_-]+", "_", text).strip("_")
+    return text[:60] or fallback
+
+def save_evaluation_payload(payload: dict[str, Any]) -> Path:
+    date_key = str(payload.get("date") or datetime.now().strftime("%Y-%m-%d")).strip()
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_key):
+        date_key = datetime.now().strftime("%Y-%m-%d")
+
+    saved_at = iso_now()
+    source_token = safe_history_token(
+        payload.get("evaluation_flow")
+        or payload.get("source_word_file")
+        or payload.get("source_snapshot")
+        or payload.get("source_snapshot_name")
+        or "evaluation"
+    )
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    history_filename = f"{timestamp}_{date_key}_{source_token}.json"
+
+    payload["latest_history_snapshot"] = history_filename
+    payload["latest_history_saved_at"] = saved_at
+
+    active_path = evaluations_dir() / f"{date_key}.json"
+    with open(active_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+    history_path = evaluations_history_dir() / history_filename
+    with open(history_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+    return active_path
 
 def load_evaluation_file(path: Path) -> Optional[dict[str, Any]]:
     try:
@@ -3365,6 +3397,26 @@ def admin_evaluations_snapshots(admin=Depends(require_admin)):
                 "is_latest": False,
             })
 
+    return {"items": items}
+
+@app.get("/admin/evaluations/history")
+def admin_evaluations_history(admin=Depends(require_admin)):
+    history_dir = evaluations_history_dir()
+    items = []
+    for file in sorted(history_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+        if not file.is_file():
+            continue
+        data = load_evaluation_file(file) or {}
+        items.append({
+            "filename": file.name,
+            "date": data.get("date") or "",
+            "source_snapshot": data.get("source_snapshot"),
+            "source_word_file": data.get("source_word_file"),
+            "evaluation_flow": data.get("evaluation_flow"),
+            "saved_at": data.get("latest_history_saved_at"),
+            "modified_at": datetime.fromtimestamp(file.stat().st_mtime, tz=timezone.utc).isoformat(),
+            "size_bytes": file.stat().st_size,
+        })
     return {"items": items}
 
 @app.post("/admin/evaluations/manual-override")
