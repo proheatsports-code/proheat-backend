@@ -376,6 +376,25 @@
       font-size: 16px;
     }
 
+    .pick-meta {
+      color: #bfbfbf;
+      font-size: 14px;
+      margin-bottom: 10px;
+      line-height: 1.45;
+    }
+
+    .pick-bullets {
+      margin: 0;
+      padding-left: 20px;
+      color: #e2e2e2;
+      line-height: 1.65;
+      font-size: 16px;
+    }
+
+    .pick-bullets li {
+      margin-bottom: 4px;
+    }
+
     .promo-video-box {
       background: rgba(0,0,0,0.18);
       border: 1px solid rgba(255,255,255,0.05);
@@ -1420,6 +1439,78 @@
       videoElement.addEventListener("canplay", playAttempt, { once: true });
     }
 
+    function getPickValue(item, keys) {
+      for (const key of keys) {
+        if (item && item[key] !== undefined && item[key] !== null && String(item[key]).trim() !== "") {
+          return String(item[key]).trim();
+        }
+      }
+      return "";
+    }
+
+    function getPublicPickGroups(items) {
+      if (!Array.isArray(items)) return [];
+
+      const groups = [];
+      const groupMap = new Map();
+
+      items.forEach((pick, index) => {
+        const hora = getPickValue(pick, ["hora", "Hora", "time", "Time"]);
+        const liga = getPickValue(pick, ["liga", "Liga", "league", "League"]);
+        const match = localizeField(pick, "partido", "partido_en")
+          || getPickValue(pick, ["partido", "Partido", "match", "Match"]);
+
+        const prediction = localizeField(pick, "prediccion", "prediccion_en")
+          || localizeField(pick, "predicción", "predicción_en")
+          || getPickValue(pick, [
+            "prediccion",
+            "Prediccion",
+            "predicción",
+            "Predicción",
+            "prediction",
+            "Prediction",
+            "pick",
+            "Pick",
+            "pronostico",
+            "Pronostico",
+            "pronóstico",
+            "Pronóstico"
+          ]);
+
+        const prediction1 = localizeField(pick, "prediccion_1", "prediccion_1_en")
+          || getPickValue(pick, ["prediccion_1", "Prediccion 1", "Predicción 1"]);
+        const prediction2 = localizeField(pick, "prediccion_2", "prediccion_2_en")
+          || getPickValue(pick, ["prediccion_2", "Prediccion 2", "Predicción 2"]);
+
+        const key = [
+          hora.toLowerCase(),
+          liga.toLowerCase(),
+          match.toLowerCase()
+        ].join("|");
+
+        if (!groupMap.has(key)) {
+          groupMap.set(key, {
+            hora,
+            liga,
+            match,
+            predictions: [],
+            order: index
+          });
+          groups.push(groupMap.get(key));
+        }
+
+        const group = groupMap.get(key);
+        [prediction, prediction1, prediction2].forEach(value => {
+          const clean = String(value || "").trim();
+          if (clean && !group.predictions.some(existing => existing.toLowerCase() === clean.toLowerCase())) {
+            group.predictions.push(clean);
+          }
+        });
+      });
+
+      return groups.sort((a, b) => a.order - b.order);
+    }
+
     function renderMatchCenter(items) {
       const container = document.getElementById("matchCenterList");
 
@@ -1428,11 +1519,11 @@
         return;
       }
 
-      const topItems = items.slice(0, 3);
+      const groups = getPublicPickGroups(items);
+      const topItems = groups.slice(0, 3);
 
-      container.innerHTML = topItems.map(pick => {
-        const match = localizeField(pick, "partido", "partido_en") || pick.partido || "";
-        return `<div class="match-item">${escapeHtml(match)}</div>`;
+      container.innerHTML = topItems.map(group => {
+        return `<div class="match-item">${escapeHtml(group.match || "")}</div>`;
       }).join("");
     }
 
@@ -1449,18 +1540,24 @@
         return;
       }
 
-      container.innerHTML = items.map(pick => {
-        const match = localizeField(pick, "partido", "partido_en") || "";
-        const prediction1 = localizeField(pick, "prediccion_1", "prediccion_1_en") || "";
-        const prediction2 = localizeField(pick, "prediccion_2", "prediccion_2_en") || "";
+      const groups = getPublicPickGroups(items).filter(group => group.match);
+
+      if (!groups.length) {
+        container.innerHTML = `<div class="pick-card"><div class="pick-line">${escapeHtml(t("noPicks"))}</div></div>`;
+        return;
+      }
+
+      container.innerHTML = groups.map(group => {
+        const metaParts = [group.hora, group.liga].filter(Boolean);
+        const predictionsHtml = group.predictions.length
+          ? `<ul class="pick-bullets">${group.predictions.map(prediction => `<li>${escapeHtml(prediction)}</li>`).join("")}</ul>`
+          : `<div class="pick-line">N/A</div>`;
 
         return `
           <div class="pick-card">
-            <div class="pick-match">${escapeHtml(match)}</div>
-            <div class="pick-line">
-              ${escapeHtml(prediction1)}
-              ${prediction2 ? `<br>${escapeHtml(prediction2)}` : ""}
-            </div>
+            <div class="pick-match">${escapeHtml(group.match)}</div>
+            ${metaParts.length ? `<div class="pick-meta">${escapeHtml(metaParts.join(" · "))}</div>` : ""}
+            ${predictionsHtml}
           </div>
         `;
       }).join("");
