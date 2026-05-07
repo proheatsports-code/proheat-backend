@@ -516,6 +516,22 @@
           </div>
 
           <div class="summary-box">
+            <strong>Subir evaluación desde Word</strong>
+            <div class="small" style="margin:6px 0 12px;">
+              Flujo híbrido: primero lee el Word, después completa con API-Football y al final puedes corregir manualmente lo pendiente.
+            </div>
+
+            <div class="toolbar">
+              <input type="file" id="evaluationWordFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="max-width:420px;margin-bottom:0;" />
+              <label style="display:flex;gap:8px;align-items:center;margin:0;color:#ddd;font-weight:normal;">
+                <input type="checkbox" id="wordCompleteWithApi" checked style="width:auto;margin:0;" />
+                Completar faltantes con API-Football
+              </label>
+              <button class="btn btn-primary" onclick="uploadEvaluationWord()">Procesar Word</button>
+            </div>
+          </div>
+
+          <div class="summary-box">
             <strong>Agregar resultado manual completo</strong>
             <div class="small" style="margin:6px 0 12px;">
               Úsalo cuando API-Football no encuentre el partido o quieras cargar un resultado totalmente manual.
@@ -1237,7 +1253,7 @@
                 <td>${escapeHtml(r.partido || r.match || "")}</td>
                 <td style="white-space:pre-wrap;">${escapeHtml(formatEvaluationPick(r))}</td>
                 <td>${escapeHtml(formatEvaluationScore(r))}</td>
-                <td>${statusPill(r.status || r.estado || "")}${r.manual_override ? `<br><span class="small">Manual</span>` : ""}</td>
+                <td>${statusPill(r.status || r.estado || "")}${r.word_source ? `<br><span class="small">Word</span>` : ""}${r.manual_result ? `<br><span class="small">Manual completo</span>` : ""}${r.manual_override && !r.word_source && !r.manual_result ? `<br><span class="small">Manual</span>` : ""}</td>
                 <td>${escapeHtml(r.market || r.mercado || r.section_label || "")}</td>
                 <td>
                   <div class="action-group">
@@ -1382,6 +1398,61 @@
       }
     }
 
+    async function uploadEvaluationWord() {
+      const dateValue = currentEvaluationDate || document.getElementById("evaluationDate")?.value;
+      const snapshotValue = document.getElementById("evaluationSnapshot")?.value || "latest.json";
+      const file = document.getElementById("evaluationWordFile")?.files?.[0];
+      const completeWithApi = !!document.getElementById("wordCompleteWithApi")?.checked;
+
+      if (!dateValue) {
+        showMessage("actionMessage", "Selecciona una fecha antes de procesar el Word.", "error");
+        return;
+      }
+
+      if (!file) {
+        showMessage("actionMessage", "Selecciona un archivo Word .docx.", "error");
+        return;
+      }
+
+      if (!file.name.toLowerCase().endsWith(".docx")) {
+        showMessage("actionMessage", "El archivo debe ser .docx.", "error");
+        return;
+      }
+
+      if (!confirm(`¿Procesar Word para ${dateValue}?\nFuente 1: Word\nFuente 2: ${completeWithApi ? 'API-Football' : 'No usar API'}\nFuente 3: Manual`)) return;
+
+      const formData = new FormData();
+      formData.append("date", dateValue);
+      formData.append("file", file);
+      formData.append("complete_with_api", completeWithApi ? "true" : "false");
+      if (snapshotValue && snapshotValue !== "latest.json") {
+        formData.append("history_filename", snapshotValue);
+      }
+
+      try {
+        showMessage("actionMessage", "Procesando Word y completando evaluación híbrida...", "warning");
+        const response = await fetch(`${API_BASE}/admin/evaluations/upload-word`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${getAdminToken()}` },
+          body: formData
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          const errorText = typeof data.detail === "string" ? data.detail : JSON.stringify(data, null, 2);
+          showMessage("actionMessage", errorText || "No se pudo procesar el Word.", "error");
+          return;
+        }
+
+        showMessage("actionMessage", data.message || "Word procesado correctamente.", "success");
+        currentEvaluationDate = dateValue;
+        document.getElementById("evaluationWordFile").value = "";
+        loadEvaluationsDashboard();
+      } catch (error) {
+        showMessage("actionMessage", `Error de conexión: ${error}`, "error");
+      }
+    }
+
     async function addManualEvaluationResult() {
       const dateValue = currentEvaluationDate || document.getElementById("evaluationDate")?.value;
       const section = document.getElementById("manualResultSection")?.value || "ultra";
@@ -1459,9 +1530,13 @@
 
         const sections = data.sections || data.items || data || {};
         const labels = {
+          general: "Tabla General",
           ultra: "Predicciones Ultrafiltradas (Hoja2)",
-          public: "Predicciones Simples (Hoja8)",
+          stakes: "Stakes (Hoja3)",
           combinadas: "Combinadas IA (Hoja4)",
+          goles: "Goles Probables (Hoja5)",
+          top: "Top Valor Estadístico (Hoja6)",
+          public: "Predicciones Simples (Hoja8)",
           inferno: "Combinadas Inferno (Hoja9)"
         };
 
@@ -1470,12 +1545,19 @@
         let html = `
           <div class="summary-box">
             <strong>Última evaluación:</strong> ${escapeHtml(currentEvaluationDate)}<br>
-            <span class="small">Este dashboard evalúa solo Hoja2, Hoja8, Hoja4 y Hoja9. Puedes marcar manualmente acierto/error cuando la API no cierre el resultado.</span>
+            <span class="small">Dashboard híbrido: Word → API-Football → corrección manual. Puedes marcar manualmente acierto/error cuando una fuente no cierre el resultado.</span>
           </div>
         `;
 
-        ["ultra", "public", "combinadas", "inferno"].forEach(key => {
-          html += renderEvaluationSummaryBlock(labels[key], sections[key] || {}, key);
+        const preferredKeys = ["general", "ultra", "stakes", "combinadas", "goles", "top", "public", "inferno"];
+        preferredKeys.forEach(key => {
+          if (sections[key]) html += renderEvaluationSummaryBlock(labels[key] || key, sections[key] || {}, key);
+        });
+
+        Object.keys(sections).forEach(key => {
+          if (!preferredKeys.includes(key)) {
+            html += renderEvaluationSummaryBlock(labels[key] || key, sections[key] || {}, key);
+          }
         });
 
         setTable("Dashboard Resultados", html);

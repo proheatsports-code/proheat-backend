@@ -2384,9 +2384,13 @@ def api_history_json(filename: str):
 # =========================
 
 EVALUATION_SECTIONS = {
+    "general": "Tabla General",
     "ultra": "Predicciones Ultrafiltradas",
-    "public": "Predicciones Simples",
+    "stakes": "Stakes",
     "combinadas": "Combinadas IA",
+    "goles": "Goles Probables",
+    "top": "Top Valor Estadístico",
+    "public": "Predicciones Simples",
     "inferno": "Combinadas Inferno",
 }
 
@@ -2922,6 +2926,311 @@ def build_evaluation_payload(snapshot_data: dict[str, Any], date_key: str) -> di
     }
     return apply_manual_overrides_to_payload(payload)
 
+
+def empty_evaluation_payload(date_key: str, source: str = "manual") -> dict[str, Any]:
+    return {
+        "date": date_key,
+        "generated_at": iso_now(),
+        "source_snapshot": source,
+        "sections": {
+            key: {"label": label, "summary": summarize_evaluations([]), "items": []}
+            for key, label in EVALUATION_SECTIONS.items()
+        },
+    }
+
+def status_from_word_value(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if not text:
+        return "unknown"
+    if "❌" in text or "✗" in text or "x" == text or "error" in text or "fall" in text:
+        return "miss"
+    if "✅" in text or "✔" in text or "acierto" in text or "hit" in text or text == "si" or text == "sí":
+        return "hit"
+    if "n/a" in text or "na" == text or "no comparable" in text or "sin evaluar" in text:
+        return "unknown"
+    if "pend" in text:
+        return "pending"
+    if "parcial" in text and ("✅" in text or "acierto" in text):
+        return "hit"
+    return "unknown"
+
+def combine_statuses(statuses: list[str]) -> str:
+    known = [s for s in statuses if s in {"hit", "miss", "pending", "unknown"}]
+    if not known:
+        return "unknown"
+    comparable = [s for s in known if s in {"hit", "miss"}]
+    if any(s == "miss" for s in comparable):
+        return "miss"
+    if any(s == "hit" for s in comparable):
+        return "hit"
+    if any(s == "pending" for s in known):
+        return "pending"
+    return "unknown"
+
+def detect_word_section(title: str) -> Optional[str]:
+    t = normalize_text(title)
+    if not t:
+        return None
+    if "tabla 1" in t or "general" in t:
+        return "general"
+    if "tabla 2" in t or "ultrafiltr" in t:
+        return "ultra"
+    if "tabla 3" in t or "stakes" in t or "stake" in t:
+        return "stakes"
+    if "tabla 4" in t or "combinada" in t:
+        return "combinadas"
+    if "tabla 5" in t or "goles probables" in t:
+        return "goles"
+    if "tabla 6" in t or "top valor" in t or "valor estadistico" in t or "valor estadístico" in t:
+        return "top"
+    if "predicciones simples" in t:
+        return "public"
+    if "inferno" in t:
+        return "inferno"
+    return None
+
+def docx_iter_block_items(document):
+    # Import here so the backend can still boot even if python-docx is not installed.
+    from docx.document import Document as _Document
+    from docx.table import _Cell, Table
+    from docx.text.paragraph import Paragraph
+
+    parent_elm = document.element.body
+    for child in parent_elm.iterchildren():
+        if child.tag.endswith('}p'):
+            yield Paragraph(child, document)
+        elif child.tag.endswith('}tbl'):
+            yield Table(child, document)
+
+def docx_table_to_rows(table) -> list[list[str]]:
+    rows = []
+    for row in table.rows:
+        values = []
+        for cell in row.cells:
+            text = " ".join(p.text.strip() for p in cell.paragraphs if p.text and p.text.strip())
+            values.append(text.strip())
+        if any(values):
+            rows.append(values)
+    return rows
+
+def guess_status_column(headers: list[str]) -> Optional[int]:
+    for i, h in enumerate(headers):
+        hn = normalize_text(h)
+        if "estado" in hn or "status" in hn:
+            return i
+    for i, h in enumerate(headers):
+        hn = normalize_text(h)
+        if "resultado" in hn and len(headers) <= 4:
+            return i
+    return None
+
+def header_index(headers: list[str], names: list[str]) -> Optional[int]:
+    normalized_names = [normalize_text(n) for n in names]
+    for i, h in enumerate(headers):
+        hn = normalize_text(h)
+        if any(n in hn for n in normalized_names):
+            return i
+    return None
+
+def build_word_item(section: str, headers: list[str], values: list[str]) -> Optional[dict[str, Any]]:
+    if not values:
+        return None
+    # Skip summary rows and repeated headers.
+    first = normalize_text(values[0])
+    if not first or "resumen" in first or "variable" == first or first.startswith("efectividad") or first.startswith("unidades"):
+        return None
+
+    while len(values) < len(headers):
+        values.append("")
+
+    lower_headers = [normalize_text(h) for h in headers]
+    status_idx = guess_status_column(headers)
+    pick_idx = header_index(headers, ["pick", "combinada", "partido", "equipo/pick"])
+    result_idx = header_index(headers, ["resultado", "marcador"])
+    hora_idx = header_index(headers, ["hora"])
+    liga_idx = header_index(headers, ["liga", "competicion", "competición"])
+
+    if section == "general":
+        partido = values[0]
+        evaluations = []
+        statuses = []
+        for idx in range(1, min(len(headers), len(values))):
+            h = headers[idx].strip() or f"col_{idx}"
+            if normalize_text(h) in {"resultado", "marcador"}:
+                continue
+            st = status_from_word_value(values[idx])
+            if st == "unknown" and not str(values[idx]).strip():
+                continue
+            statuses.append(st)
+            evaluations.append({
+                "field": h,
+                "prediction": h,
+                "status": st,
+                "reason": f"Evaluado desde Word: {values[idx]}",
+            })
+        status = combine_statuses(statuses)
+        return {
+            "section": section,
+            "section_label": EVALUATION_SECTIONS.get(section, section),
+            "hora": values[hora_idx] if hora_idx is not None and hora_idx < len(values) else None,
+            "liga": values[liga_idx] if liga_idx is not None and liga_idx < len(values) else None,
+            "partido": partido,
+            "status": status,
+            "score": None,
+            "evaluations": evaluations,
+            "word_source": True,
+            "manual_override": True,
+            "reason": "Evaluado desde tabla Word.",
+            "resultado_manual": partido,
+        }
+
+    if section == "goles" and len(values) >= 3 and any("acierto" in h for h in lower_headers):
+        partido = values[0]
+        try:
+            aciertos = int(re.sub(r"\D", "", values[1]) or 0)
+        except Exception:
+            aciertos = 0
+        try:
+            errores = int(re.sub(r"\D", "", values[2]) or 0)
+        except Exception:
+            errores = 0
+        status = "miss" if errores > 0 else ("hit" if aciertos > 0 else "unknown")
+        return {
+            "section": section,
+            "section_label": EVALUATION_SECTIONS.get(section, section),
+            "hora": None,
+            "liga": None,
+            "partido": partido,
+            "status": status,
+            "score": None,
+            "evaluations": [{"field": "goles_probables", "prediction": partido, "status": status, "reason": f"Word: {aciertos} aciertos / {errores} errores"}],
+            "word_source": True,
+            "manual_override": True,
+            "reason": f"Evaluado desde Word: {aciertos} aciertos / {errores} errores.",
+            "resultado_manual": f"{aciertos} aciertos / {errores} errores",
+        }
+
+    partido = values[pick_idx] if pick_idx is not None and pick_idx < len(values) else values[0]
+    resultado = values[result_idx] if result_idx is not None and result_idx < len(values) else ""
+    status = status_from_word_value(values[status_idx]) if status_idx is not None and status_idx < len(values) else combine_statuses([status_from_word_value(v) for v in values])
+    if status == "unknown" and all(status_from_word_value(v) == "unknown" for v in values):
+        return None
+
+    return {
+        "section": section,
+        "section_label": EVALUATION_SECTIONS.get(section, section),
+        "hora": values[hora_idx] if hora_idx is not None and hora_idx < len(values) else None,
+        "liga": values[liga_idx] if liga_idx is not None and liga_idx < len(values) else None,
+        "partido": partido,
+        "status": status,
+        "score": None,
+        "evaluations": [{
+            "field": "word",
+            "prediction": partido,
+            "status": status,
+            "reason": f"Resultado Word: {resultado or values[status_idx] if status_idx is not None and status_idx < len(values) else ''}",
+        }] if status in {"hit", "miss"} else [],
+        "word_source": True,
+        "manual_override": True,
+        "reason": "Evaluado desde Word.",
+        "resultado_manual": resultado,
+    }
+
+def parse_evaluation_docx(docx_path: Path, date_key: str) -> dict[str, Any]:
+    try:
+        from docx import Document
+    except Exception:
+        raise HTTPException(status_code=500, detail="Falta instalar python-docx. Agrega python-docx a requirements.txt y redeploya.")
+
+    document = Document(str(docx_path))
+    payload = empty_evaluation_payload(date_key, source="word")
+    current_section: Optional[str] = None
+    last_title = ""
+
+    for block in docx_iter_block_items(document):
+        if hasattr(block, "text"):
+            text = str(block.text or "").strip()
+            detected = detect_word_section(text)
+            if detected:
+                current_section = detected
+                last_title = text
+            continue
+
+        rows = docx_table_to_rows(block)
+        if not rows:
+            continue
+
+        # Try to infer section from headers if there was no explicit paragraph title.
+        if not current_section:
+            header_blob = " ".join(rows[0])
+            current_section = detect_word_section(header_blob) or "general"
+
+        headers = rows[0]
+        for values in rows[1:]:
+            item = build_word_item(current_section, headers[:], values[:])
+            if not item:
+                continue
+            item["word_table_title"] = last_title
+            payload["sections"][current_section]["items"].append(item)
+
+    for section in payload["sections"]:
+        items = payload["sections"][section].get("items", [])
+        payload["sections"][section]["summary"] = summarize_evaluations(items)
+
+    payload["generated_at"] = iso_now()
+    payload["source_word_file"] = docx_path.name
+    return payload
+
+def word_item_match_score(a: dict[str, Any], b: dict[str, Any]) -> float:
+    a_text = str(a.get("partido") or a.get("prediction") or "")
+    b_text = str(b.get("partido") or b.get("prediction") or "")
+    score1 = string_similarity(a_text, b_text)
+    # Also compare evaluation/pick text when partido is sparse.
+    a_eval = " ".join(str(ev.get("prediction", "")) for ev in a.get("evaluations", []) if isinstance(ev, dict))
+    b_eval = " ".join(str(ev.get("prediction", "")) for ev in b.get("evaluations", []) if isinstance(ev, dict))
+    score2 = string_similarity(a_eval, b_eval) if a_eval and b_eval else 0.0
+    return max(score1, score2)
+
+def merge_word_payload_into_evaluation(base_payload: dict[str, Any], word_payload: dict[str, Any]) -> dict[str, Any]:
+    base_sections = base_payload.setdefault("sections", {})
+    word_sections = word_payload.get("sections", {}) or {}
+
+    for section, word_section in word_sections.items():
+        if section not in base_sections:
+            base_sections[section] = {"label": EVALUATION_SECTIONS.get(section, section), "summary": summarize_evaluations([]), "items": []}
+
+        base_items = base_sections[section].setdefault("items", [])
+        for word_item in word_section.get("items", []) or []:
+            best_idx = None
+            best_score = 0.0
+            for idx, base_item in enumerate(base_items):
+                score = word_item_match_score(word_item, base_item)
+                if score > best_score:
+                    best_score = score
+                    best_idx = idx
+
+            if best_idx is not None and best_score >= 0.62:
+                original = base_items[best_idx]
+                original["original_status"] = original.get("original_status") or original.get("status")
+                original["status"] = word_item.get("status", original.get("status"))
+                original["word_source"] = True
+                original["manual_override"] = True
+                original["manual_override_at"] = iso_now()
+                original["reason"] = word_item.get("reason") or "Evaluado desde Word."
+                original["resultado_manual"] = word_item.get("resultado_manual")
+                if word_item.get("evaluations"):
+                    original["evaluations"] = word_item.get("evaluations")
+            else:
+                base_items.append(word_item)
+
+        base_sections[section]["items"] = base_items
+        base_sections[section]["summary"] = summarize_evaluations(base_items)
+
+    base_payload["sections"] = base_sections
+    base_payload["source_word_file"] = word_payload.get("source_word_file")
+    base_payload["word_processed_at"] = iso_now()
+    return base_payload
+
 def evaluations_dir() -> Path:
     path = DATA_DIR / "evaluations"
     path.mkdir(parents=True, exist_ok=True)
@@ -3134,15 +3443,7 @@ def admin_evaluations_manual_result(payload: EvaluationManualResultIn, admin=Dep
     evaluation_payload = load_evaluation_file(eval_path)
 
     if not evaluation_payload:
-        evaluation_payload = {
-            "date": date_key,
-            "generated_at": iso_now(),
-            "source_snapshot": "manual",
-            "sections": {
-                key: {"label": label, "summary": summarize_evaluations([]), "items": []}
-                for key, label in EVALUATION_SECTIONS.items()
-            },
-        }
+        evaluation_payload = empty_evaluation_payload(date_key, source="manual")
 
     sections = evaluation_payload.setdefault("sections", {})
     section_payload = sections.setdefault(
@@ -3196,6 +3497,66 @@ def admin_evaluations_manual_result(payload: EvaluationManualResultIn, admin=Dep
         "manual_status": status,
         "payload": evaluation_payload,
     }
+
+
+@app.post("/admin/evaluations/upload-word")
+async def admin_upload_evaluation_word(
+    date: str = Form(...),
+    history_filename: Optional[str] = Form(None),
+    complete_with_api: bool = Form(True),
+    file: UploadFile = File(...),
+    admin=Depends(require_admin)
+):
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        raise HTTPException(status_code=400, detail="date debe tener formato YYYY-MM-DD.")
+
+    filename = Path(file.filename or "evaluation.docx").name
+    if not filename.lower().endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos Word .docx.")
+
+    word_dir = evaluations_dir() / "word_uploads"
+    word_dir.mkdir(parents=True, exist_ok=True)
+    stored_name = f"{date}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+    save_path = word_dir / stored_name
+
+    try:
+        content = await file.read()
+        with open(save_path, "wb") as f:
+            f.write(content)
+
+        word_payload = parse_evaluation_docx(save_path, date)
+
+        if complete_with_api:
+            snapshot_name, snapshot_data = load_snapshot_for_evaluation(history_filename)
+            base_payload = build_evaluation_payload(snapshot_data, date)
+            base_payload["source_snapshot"] = snapshot_name
+        else:
+            base_payload = empty_evaluation_payload(date, source="word_only")
+
+        final_payload = merge_word_payload_into_evaluation(base_payload, word_payload)
+        final_payload["date"] = date
+        final_payload["generated_at"] = iso_now()
+        final_payload["evaluation_flow"] = "word_first_api_then_manual" if complete_with_api else "word_first_then_manual"
+        saved_path = save_evaluation_payload(final_payload)
+
+        write_admin_log(
+            admin_user_id=admin["user_id"],
+            action="upload_evaluation_word",
+            details=f"date={date} file={stored_name} complete_with_api={complete_with_api} saved={saved_path.name}"
+        )
+
+        return {
+            "status": "ok",
+            "message": "Word procesado correctamente. Se aplicó Word primero y API-Football completó faltantes.",
+            "date": date,
+            "word_file": stored_name,
+            "saved_path": str(saved_path),
+            "payload": final_payload,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error procesando Word de evaluación: {e}")
 
 @app.get("/api/evaluations/day/{date_key}")
 def api_evaluations_day(date_key: str):
