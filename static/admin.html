@@ -1542,23 +1542,29 @@
 
         currentEvaluationDate = formatEvalDate(data.date || data.evaluation_date || data.latest_date || currentEvaluationDate || "");
 
-        let html = `
-          <div class="summary-box">
-            <strong>Última evaluación:</strong> ${escapeHtml(currentEvaluationDate)}<br>
-            <span class="small">Dashboard híbrido: Word → API-Football → corrección manual. Puedes marcar manualmente acierto/error cuando una fuente no cierre el resultado.</span>
-          </div>
-        `;
+let html = `
+  <div class="summary-box">
+    <strong>Última evaluación:</strong> ${escapeHtml(currentEvaluationDate)}<br>
+    <span class="small">Dashboard híbrido: Word → API-Football → corrección manual. Puedes marcar manualmente acierto/error cuando una fuente no cierre el resultado.</span>
+  </div>
+`;
 
-        const preferredKeys = ["general", "ultra", "stakes", "combinadas", "goles", "top", "public", "inferno"];
-        preferredKeys.forEach(key => {
-          if (sections[key]) html += renderEvaluationSummaryBlock(labels[key] || key, sections[key] || {}, key);
-        });
+const preferredKeys = [
+  "ultra",
+  "public",
+  "combinadas",
+  "inferno"
+];
 
-        Object.keys(sections).forEach(key => {
-          if (!preferredKeys.includes(key)) {
-            html += renderEvaluationSummaryBlock(labels[key] || key, sections[key] || {}, key);
-          }
-        });
+preferredKeys.forEach(key => {
+  if (sections[key]) {
+    html += renderEvaluationSummaryBlock(
+      labels[key] || key,
+      sections[key] || {},
+      key
+    );
+  }
+});
 
         setTable("Dashboard Resultados", html);
       } catch (error) {
