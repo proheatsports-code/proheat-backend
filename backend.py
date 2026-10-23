@@ -919,6 +919,47 @@ def root():
         return FileResponse(index_path)
     return JSONResponse({"message": "Backend ProHeat activo."})
 
+# =========================
+# PROHEAT QUINIELAS — FRONTEND EN /quinielas/
+# =========================
+# Copiar aquí el contenido de frontend/dist-quinielas (build de Vite con
+# --base=/quinielas/), sin modificar los archivos actuales de static/.
+QUINIELAS_STATIC_DIR = STATIC_DIR / "quinielas"
+
+
+@app.get("/quinielas", include_in_schema=False)
+def quinielas_redirect():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/quinielas/", status_code=307)
+
+
+@app.get("/quinielas/", response_model=None, include_in_schema=False)
+def quinielas_home():
+    index_path = QUINIELAS_STATIC_DIR / "index.html"
+    if not index_path.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="El frontend de Quinielas todavía no está instalado en static/quinielas.",
+        )
+    return FileResponse(index_path, media_type="text/html")
+
+
+@app.get("/quinielas/{resource_path:path}", response_model=None, include_in_schema=False)
+def quinielas_frontend_resource(resource_path: str):
+    # Servir recursos reales (JS, CSS, imágenes) y permitir rutas internas SPA.
+    # Nunca servir index.html en lugar de un recurso faltante: causaría errores
+    # de MIME en el navegador y ocultaría un despliegue incompleto.
+    base = QUINIELAS_STATIC_DIR.resolve()
+    requested = (base / resource_path).resolve()
+    if not requested.is_relative_to(base):
+        raise HTTPException(status_code=404, detail="Recurso no encontrado")
+    if requested.is_file():
+        return FileResponse(requested)
+    if resource_path.startswith("assets/") or Path(resource_path).suffix:
+        raise HTTPException(status_code=404, detail="Recurso no encontrado")
+    return quinielas_home()
+
+
 @app.get("/premium", response_model=None)
 def premium_page():
     premium_path = STATIC_DIR / "premium.html"
