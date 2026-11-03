@@ -1514,6 +1514,28 @@
       return proheatLogoutRetryPromise;
     }
 
+    // PROHEAT_LOGOUT_STORAGE_214_3
+    function ph214PublishLogout(source) {
+      try {
+        localStorage.setItem("proheat_logout_214_3", JSON.stringify({
+          version: 1, source, id: crypto.randomUUID()
+        }));
+      } catch (error) {
+        console.warn("No fue posible sincronizar el cierre entre pestanas.");
+      }
+    }
+
+    window.addEventListener("storage", function(event) {
+      if (event.storageArea !== localStorage || event.key !== "proheat_logout_214_3" || !event.newValue) return;
+      try {
+        const signal = JSON.parse(event.newValue);
+        if (signal.version !== 1 || !["home", "quinielas"].includes(signal.source) || typeof signal.id !== "string") return;
+        logoutUser(true);
+      } catch (error) {
+        console.warn("Aviso de cierre no valido.");
+      }
+    });
+
     // PROHEAT_LOGOUT_214_3
     function ph214NotifyQuinielasLogout() {
       for (const child of ph214Windows) {
@@ -1536,10 +1558,11 @@
       if (!event.data || event.data.ph214 !== true) return;
 
       if (event.data.type === "logout-request") {
-        logoutUser();
+        logoutUser(true);
       }
     });
-    async function logoutUser() {
+    async function logoutUser(remote = false) {
+      if (remote !== true) ph214PublishLogout("home");
       const token = getToken();
 
       ph214NotifyQuinielasLogout();
