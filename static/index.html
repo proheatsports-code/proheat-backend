@@ -881,7 +881,7 @@
             <input type="email" id="inlineEmail" placeholder="Correo">
             <input type="password" id="inlinePassword" placeholder="Contraseña">
             <button class="btn-main" style="width:100%;" onclick="inlineLogin()">Entrar</button>
-            <a class="small-link" href="/premium">¿No tienes cuenta? Crear cuenta</a>
+            <a class="small-link" href="/registro">¿No tienes cuenta? Crear cuenta</a>
             <div id="inlineLoginMessage" class="auth-message"></div>
           </div>
 
@@ -959,7 +959,7 @@
         🚀 ¡Contáctanos, crea tu quiniela y acepta el desafío!
       </p>
 
-      <a class="quinielas-promo-button" href="/quinielas/">
+      <a class="quinielas-promo-button" href="https://www.proheatsports.com/quinielas/" target="_blank" onclick="ph214OpenQuinielas(event)">
         ¡Crea o juega tu quiniela!
       </a>
     </div>
@@ -1071,7 +1071,7 @@
           Si no tienes Premium, puedes crear cuenta o actualizar desde la página Premium.
           <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
             <button class="btn-main" onclick="toggleLoginPanel()">Iniciar sesión</button>
-            <a class="btn-secondary" href="/premium">Crear cuenta / Actualizar Premium</a>
+            <a class="btn-secondary" href="/registro">Crear cuenta gratis</a>
           </div>
         </div>
 
@@ -1316,25 +1316,252 @@
       return item?.[esKey] ?? "";
     }
 
+
+    async function authenticateFromQuinielas() {
+      const localToken = getToken();
+
+      if (localToken) {
+        try {
+          const response = await fetch(`${API}/auth/me`, {
+            headers: {
+              "Authorization": `Bearer ${localToken}`
+            }
+          });
+
+          if (response.ok) {
+            const user = await response.json();
+
+            if (user.user_id) {
+              localStorage.setItem("user_id", user.user_id);
+              localStorage.setItem("user_name", user.name || "");
+              localStorage.setItem("user_email", user.email || "");
+              return true;
+            }
+
+            return false;
+          }
+
+          if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user_id");
+            localStorage.removeItem("user_name");
+            localStorage.removeItem("user_email");
+          } else {
+            console.warn("No fue posible comprobar la sesion ProHeat.");
+            return false;
+          }
+        } catch (error) {
+          console.warn("Error de conexion al comprobar la sesion ProHeat.");
+          return false;
+        }
+      }
+
+      // Respetar el cierre manual de sesion en ProHeat.
+      if (localStorage.getItem("proheat_manual_logout") === "1") {
+        return false;
+      }
+
+      const centralToken = localStorage.getItem("proheat_quinielas_token");
+
+      if (!centralToken) return false;
+
+      try {
+        const response = await fetch(`${API}/auth/central`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${centralToken}`
+          }
+        });
+
+        if (!response.ok) return false;
+
+        const data = await response.json();
+
+        if (!data.token || !data.user_id) return false;
+
+        saveUserSession(data);
+        return true;
+      } catch (error) {
+        console.warn("No fue posible autenticar mediante Quinielas.");
+        return false;
+      }
+    }
+
+    // PROHEAT_SSO_214_LOCAL
+    const ph214IsLocal = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+    const ph214QuinielasUrl = ph214IsLocal
+      ? 'http://127.0.0.1:5173/'
+      : 'https://www.proheatsports.com/quinielas/';
+    const ph214QuinielasOrigin = new URL(ph214QuinielasUrl).origin;
+    const ph214Windows = new Set();
+
+    function ph214OpenQuinielas(event) {
+      event.preventDefault();
+      const child = window.open(
+        ph214QuinielasUrl,
+        "_blank"
+      );
+      if (child) ph214Windows.add(child);
+    }
+
+    window.addEventListener("message", function(event) {
+      if (event.origin !== ph214QuinielasOrigin) return;
+      if (!ph214Windows.has(event.source)) return;
+
+      const msg = event.data;
+      if (!msg || msg.ph214 !== true) return;
+      if (msg.type !== "session-request") return;
+      if (!/^[a-f0-9]{32}$/.test(msg.nonce || "")) return;
+
+      const token = getToken();
+      if (!token) return;
+      if (localStorage.getItem("proheat_manual_logout") === "1") return;
+
+      event.source.postMessage({
+        ph214: true,
+        type: "session-response",
+        nonce: msg.nonce,
+        token: token
+      }, event.origin);
+    });
     function getToken() { return localStorage.getItem("token") || ""; }
     function getUserId() { return localStorage.getItem("user_id") || ""; }
     function getUserName() { return localStorage.getItem("user_name") || ""; }
 
     function saveUserSession(data) {
+      localStorage.removeItem("proheat_manual_logout");
+
       localStorage.setItem("token", data.token || "");
       localStorage.setItem("user_id", data.user_id || "");
       localStorage.setItem("user_name", data.name || "");
       localStorage.setItem("user_email", data.email || "");
     }
 
-    function logoutUser() {
+    const PROHEAT_PENDING_LOGOUTS_KEY = "proheat_pending_logouts";
+
+    function getPendingProHeatLogouts() {
+      try {
+        const value = JSON.parse(
+          localStorage.getItem(PROHEAT_PENDING_LOGOUTS_KEY) || "[]"
+        );
+        return Array.isArray(value)
+          ? value.filter(token => typeof token === "string" && token)
+          : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function savePendingProHeatLogouts(tokens) {
+      const unique = [...new Set(tokens)];
+
+      if (unique.length) {
+        localStorage.setItem(
+          PROHEAT_PENDING_LOGOUTS_KEY,
+          JSON.stringify(unique)
+        );
+      } else {
+        localStorage.removeItem(PROHEAT_PENDING_LOGOUTS_KEY);
+      }
+    }
+
+    function queueProHeatLogout(token) {
+      if (!token) return;
+
+      savePendingProHeatLogouts([
+        ...getPendingProHeatLogouts(),
+        token
+      ]);
+    }
+
+    let proheatLogoutRetryPromise = null;
+
+    function retryPendingProHeatLogouts() {
+      if (proheatLogoutRetryPromise) {
+        return proheatLogoutRetryPromise;
+      }
+
+      proheatLogoutRetryPromise = (async () => {
+        const processPendingProHeatLogouts = async () => {
+      const pending = getPendingProHeatLogouts();
+
+      for (const token of pending) {
+        try {
+          const response = await fetch(`${API}/auth/logout`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            savePendingProHeatLogouts(
+              getPendingProHeatLogouts().filter(
+                pendingToken => pendingToken !== token
+              )
+            );
+          }
+        } catch (error) {
+          console.warn("Revocacion ProHeat pendiente de conexion.");
+        }
+      }
+    }
+        await processPendingProHeatLogouts();
+      })().finally(() => {
+        proheatLogoutRetryPromise = null;
+      });
+
+      return proheatLogoutRetryPromise;
+    }
+
+    // PROHEAT_LOGOUT_214_3
+    function ph214NotifyQuinielasLogout() {
+      for (const child of ph214Windows) {
+        try {
+          if (!child.closed) {
+            child.postMessage({
+              ph214: true,
+              type: "logout"
+            }, ph214QuinielasOrigin);
+          }
+        } catch (error) {
+          console.warn("No fue posible notificar a Quinielas.");
+        }
+      }
+    }
+
+    window.addEventListener("message", function(event) {
+      if (event.origin !== ph214QuinielasOrigin) return;
+      if (!ph214Windows.has(event.source)) return;
+      if (!event.data || event.data.ph214 !== true) return;
+
+      if (event.data.type === "logout-request") {
+        logoutUser();
+      }
+    });
+    async function logoutUser() {
+      const token = getToken();
+
+      ph214NotifyQuinielasLogout();
+
+      // Evitar la reconexion automatica desde Quinielas.
+      localStorage.setItem("proheat_manual_logout", "1");
+
+      // Registrar la revocacion antes de eliminar la sesion local.
+      if (token) {
+        queueProHeatLogout(token);
+      }
+
       localStorage.removeItem("token");
       localStorage.removeItem("user_id");
       localStorage.removeItem("user_name");
       localStorage.removeItem("user_email");
+
       closeUserPanel();
       applyAuthUI();
       updatePremiumAccess("logged_out");
+
+      await retryPendingProHeatLogouts();
     }
 
     function toggleMenu() {
@@ -1407,14 +1634,23 @@
         const data = await res.json();
 
         if (!res.ok) {
-          showAuthMessage(data.detail || "No se pudo iniciar sesión.", "error");
+          const detalle = data.detail;
+const mensaje = typeof detalle === "string"
+  ? detalle
+  : Array.isArray(detalle)
+    ? detalle.map(e => e.msg || JSON.stringify(e)).join("; ")
+    : detalle
+      ? JSON.stringify(detalle)
+      : "No se pudo iniciar sesión.";
+
+showAuthMessage(mensaje, "error");
           return;
         }
 
         saveUserSession(data);
         closeLoginPanel();
         applyAuthUI();
-        await checkMembershipAndPremium(true);
+        await checkMembershipAndPremium(false);
       } catch (error) {
         showAuthMessage("Error de conexión al iniciar sesión.", "error");
       }
@@ -2046,12 +2282,40 @@
     }
 
     applyLanguage();
-    applyAuthUI();
+
+    async function initializeProHeatSession() {
+      await retryPendingProHeatLogouts();
+      await authenticateFromQuinielas();
+      applyAuthUI();
+      await checkMembershipAndPremium(false);
+    }
+
     loadPublicPicks();
     loadResultsDashboard();
     loadFreePicksPromoVideo();
     loadVideoPick();
-    checkMembershipAndPremium(false);
+
+    initializeProHeatSession();
   </script>
+<script>
+/* PROHEAT_LOGIN_SCROLL_FIX_214 */
+(function () {
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+
+  function regresarAlInicio() {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant"
+    });
+  }
+
+  window.addEventListener("load", function () {
+    regresarAlInicio();
+  });
+})();
+</script>
 </body>
 </html>

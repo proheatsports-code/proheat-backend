@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ProHeat Sports | Registro gratuito</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- PAYPAL SDK (LIVE) -->
+<script src="https://www.paypal.com/sdk/js?client-id=ATF9sXE6MPpXpPI5qBN5kDy-Xm7n9JPgFylvPm0apb5qyN9fCUwtEvexelhAHmB1tRlW1JOsUKOoV_kV&currency=MXN"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#000;
+  color:white;
+}
+
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:20px;
+}
+
+.card{
+  background:#111;
+  padding:20px;
+  border-radius:15px;
+  margin-bottom:20px;
+  border:1px solid rgba(255,120,0,0.3);
+}
+
+.btn{
+  background:orange;
+  color:black;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  width:100%;
+  font-weight:bold;
+  margin-top:10px;
+}
+
+.btn.secondary{
+  background:#222;
+  color:white;
+  border:1px solid rgba(255,120,0,0.45);
+}
+
+.btn.small{
+  width:auto;
+  padding:10px 14px;
+  margin-right:8px;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:none;
+}
+
+input[type="file"]{
+  background:#222;
+  color:white;
+}
+
+.message{
+  margin-top:10px;
+  padding:10px;
+  border-radius:8px;
+  line-height:1.4;
+}
+
+.success{ background:#1f7a3a; }
+.error{ background:#8b2c2c; }
+.warning{ background:#8a6a1d; }
+.info{ background:#1b3558; }
+
+.hidden{ display:none !important; }
+
+.status-pill{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:bold;
+  font-size:13px;
+  margin-left:6px;
+}
+
+.status-active{ background:#0f6b35; color:#9dffc0; }
+.status-pending{ background:#6b5510; color:#ffd77a; }
+.status-expired{ background:#6b1919; color:#ffaaaa; }
+
+.clabe-box{
+  background:#000;
+  border:1px solid rgba(255,120,0,0.35);
+  padding:14px;
+  border-radius:12px;
+  margin-top:12px;
+  font-size:20px;
+  letter-spacing:1px;
+  font-weight:bold;
+  color:orange;
+  word-break:break-word;
+}
+
+.action-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.action-row .btn{
+  flex:1;
+  min-width:180px;
+}
+
+.free-links{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.premium-content-grid{
+  display:grid;
+  gap:16px;
+}
+
+.premium-section{
+  background:#0b0b0b;
+  border:1px solid rgba(255,120,0,0.25);
+  border-radius:14px;
+  padding:16px;
+}
+
+.premium-section h3{
+  color:orange;
+  margin-top:0;
+}
+
+.premium-items{
+  display:grid;
+  gap:10px;
+}
+
+.premium-item{
+  background:#050505;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  padding:12px;
+  line-height:1.45;
+}
+
+.premium-item-title{
+  color:orange;
+  font-weight:bold;
+  font-size:18px;
+  margin-bottom:8px;
+}
+
+.premium-field{
+  color:#e8e8e8;
+  font-size:14px;
+  margin:3px 0;
+}
+
+.premium-field strong{
+  color:#ffb22e;
+}
+
+.premium-empty{
+  color:#bbb;
+  font-size:14px;
+  padding:10px;
+  border-radius:10px;
+  background:#111;
+}
+
+
+.premium-tabs{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:18px 0;
+}
+
+.premium-tab-btn{
+  background:#222;
+  color:white;
+  border:1px solid rgba(255,120,0,0.45);
+  border-radius:999px;
+  padding:10px 14px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.premium-tab-btn.active{
+  background:orange;
+  color:black;
+  border-color:orange;
+}
+
+.premium-table-wrap{
+  overflow-x:auto;
+  border:1px solid rgba(255,120,0,0.25);
+  border-radius:14px;
+  background:#050505;
+}
+
+.premium-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:900px;
+}
+
+.premium-table th{
+  background:rgba(255,120,0,0.12);
+  color:orange;
+  text-align:left;
+  padding:12px;
+  border-bottom:1px solid rgba(255,120,0,0.20);
+  white-space:nowrap;
+}
+
+.premium-table td{
+  color:#eee;
+  padding:12px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  vertical-align:top;
+  line-height:1.4;
+}
+
+.premium-table tr:hover td{
+  background:rgba(255,120,0,0.04);
+}
+
+@media(max-width:700px){
+  .free-links{ grid-template-columns:1fr; }
+  .action-row{ display:block; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🔥 ProHeat Sports | Registro gratuito</h1>
+<a class="btn secondary small" href="/">← Regresar a Home</a>
+
+<!-- CREAR CUENTA -->
+<div class="card" id="loginBox">
+<h2>Crear cuenta</h2>
+<p>Crea una cuenta gratuita para acceder a ProHeat Sports y Quinielas.</p>
+
+<input type="text" id="nameReg" placeholder="Nombre">
+<input type="email" id="emailReg" placeholder="Correo">
+<input type="password" id="passReg" placeholder="Contraseña">
+<button type="button" id="togglePassword213"
+onclick="togglePasswordVisibility213()"
+style="margin-top:8px;padding:8px 14px;cursor:pointer;border:1px solid #d18400;border-radius:8px;background:#222;color:white;">
+👁 Mostrar contraseña
+</button>
+
+<button class="btn" onclick="register()">Crear cuenta</button>
+
+<div id="loginMessage"></div>
+
+<a class="btn secondary" href="/">Regresar a Home</a>
+</div>
+
+<!-- USUARIO -->
+<div class="card hidden" id="userBox">
+<h2 id="userInfo">Sesión iniciada</h2>
+<p id="membershipStatus"></p>
+
+<div id="freeSessionBox" class="message warning hidden">
+  Tu sesión está activa, pero aún no tienes membresía premium. Puedes seguir usando la versión gratuita o activar Premium.
+</div>
+
+<div id="premiumActiveBox" class="message success hidden">
+  Tu membresía Premium está activa. Ya puedes acceder al contenido premium de ProHeat Sports.
+</div>
+
+<div class="free-links" style="margin-top:12px;">
+  <a class="btn secondary" href="/">Ver versión gratuita</a>
+  <button class="btn secondary" onclick="showPaymentSection()">Activar Premium</button>
+</div>
+
+<button class="btn secondary" onclick="logout()">Cerrar sesión</button>
+</div>
+
+
+<!-- CONTENIDO PREMIUM -->
+<div class="card hidden" id="premiumContentBox">
+<h2>🔥 Picks Premium</h2>
+<p>Contenido premium activo para tu cuenta. Elige una sección para ver cada hoja en formato tabla.</p>
+
+<div class="premium-tabs" id="premiumTabs"></div>
+<div id="premiumContentMessage" class="message info hidden"></div>
+<div id="premiumTableContainer" class="premium-table-wrap">
+  <div class="premium-empty">Cargando contenido premium...</div>
+</div>
+</div>
+
+<!-- PAGO -->
+<div class="card hidden" id="paymentBox">
+<h3>Premium 30 días - $110 MXN</h3>
+<p>Puedes pagar con PayPal/tarjeta o por transferencia directa. Si pagas por transferencia, sube tu comprobante para revisión manual.</p>
+
+<h3>Pago inmediato con PayPal</h3>
+<div id="paypal-button-container"></div>
+<div id="paypalMessage"></div>
+</div>
+
+<!-- TRANSFERENCIA DIRECTA -->
+<div class="card hidden" id="transferBox">
+<h3>Transferencia directa</h3>
+<p>CLABE para transferencia:</p>
+
+<div class="clabe-box" id="clabeDisplay">••••••••••••••9849</div>
+
+<div class="action-row">
+  <button class="btn secondary" onclick="toggleClabe()" id="toggleClabeBtn">Mostrar CLABE</button>
+  <button class="btn" onclick="copyClabe()">Copiar CLABE</button>
+</div>
+
+<div id="clabeMessage"></div>
+
+<h3>Subir comprobante manual</h3>
+<p>Después de hacer la transferencia, sube tu comprobante. El admin podrá aprobar tu membresía.</p>
+
+<input type="file" id="proofFile" accept="image/*,.pdf">
+<button class="btn" onclick="uploadProof()">Subir comprobante</button>
+
+<div id="proofMessage"></div>
+</div>
+
+</div>
+
+<script>
+const API = window.location.origin;
+const CLABE = "072840012825279849";
+let clabeVisible = false;
+let paypalRendered = false;
+let currentUserId = localStorage.getItem("user_id") || "";
+
+const premiumSections = [
+  { key:"general", label:"Partidos del día", endpoint:"/api/data/general" },
+  { key:"ultra", label:"Picks Ultrafiltradas", endpoint:"/api/data/ultra" },
+  { key:"stakes", label:"Control de banca", endpoint:"/api/data/stakes" },
+  { key:"combinadas", label:"Combinadas IA", endpoint:"/api/data/combinadas" },
+  { key:"goles", label:"Goles", endpoint:"/api/data/goles" },
+  { key:"top", label:"Top Valor Estadístico", endpoint:"/api/data/top" },
+  { key:"alta_confianza", label:"Equipos confiables", endpoint:"/api/data/alta-confianza" },
+  { key:"public", label:"Picks Simples", endpoint:"/api/data/public" },
+  { key:"inferno", label:"Combinadas Inferno", endpoint:"/api/data/inferno" }
+];
+
+let premiumCache = {};
+let activePremiumTab = "general";
+
+function setMsg(id, msg, type){
+  const el = document.getElementById(id);
+  el.innerHTML = msg;
+  el.className = "message " + type;
+}
+
+function clearMsg(id){
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  el.className = "";
+}
+
+function saveSession(data){
+  // Un inicio de sesion explicito permite volver a conectar ProHeat.
+  localStorage.removeItem("proheat_manual_logout");
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("user_id", data.user_id);
+  localStorage.setItem("user_name", data.name || "");
+  localStorage.setItem("user_email", data.email || "");
+  currentUserId = data.user_id;
+}
+
+function getToken(){ return localStorage.getItem("token"); }
+function getUserId(){ return localStorage.getItem("user_id") || currentUserId; }
+
+    const PROHEAT_PENDING_LOGOUTS_KEY = "proheat_pending_logouts";
+
+    function getPendingProHeatLogouts() {
+      try {
+        const value = JSON.parse(
+          localStorage.getItem(PROHEAT_PENDING_LOGOUTS_KEY) || "[]"
+        );
+        return Array.isArray(value)
+          ? value.filter(token => typeof token === "string" && token)
+          : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function savePendingProHeatLogouts(tokens) {
+      const unique = [...new Set(tokens)];
+
+      if (unique.length) {
+        localStorage.setItem(
+          PROHEAT_PENDING_LOGOUTS_KEY,
+          JSON.stringify(unique)
+        );
+      } else {
+        localStorage.removeItem(PROHEAT_PENDING_LOGOUTS_KEY);
+      }
+    }
+
+    function queueProHeatLogout(token) {
+      if (!token) return;
+
+      savePendingProHeatLogouts([
+        ...getPendingProHeatLogouts(),
+        token
+      ]);
+    }
+
+    let proheatLogoutRetryPromise = null;
+
+    function retryPendingProHeatLogouts() {
+      if (proheatLogoutRetryPromise) {
+        return proheatLogoutRetryPromise;
+      }
+
+      proheatLogoutRetryPromise = (async () => {
+        const processPendingProHeatLogouts = async () => {
+      const pending = getPendingProHeatLogouts();
+
+      for (const token of pending) {
+        try {
+          const response = await fetch("/auth/logout", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            savePendingProHeatLogouts(
+              getPendingProHeatLogouts().filter(
+                pendingToken => pendingToken !== token
+              )
+            );
+          }
+        } catch (error) {
+          console.warn("Revocacion ProHeat pendiente de conexion.");
+        }
+      }
+    }
+        await processPendingProHeatLogouts();
+      })().finally(() => {
+        proheatLogoutRetryPromise = null;
+      });
+
+      return proheatLogoutRetryPromise;
+    }
+
+async function logout(){
+  const token = localStorage.getItem("token");
+
+  // Respetar el cierre manual en todo ProHeat Sports.
+  localStorage.setItem("proheat_manual_logout", "1");
+
+  // Registrar la revocacion antes de borrar el token local.
+  if (token) {
+    queueProHeatLogout(token);
+  }
+
+  localStorage.removeItem("token");
+  localStorage.removeItem("user_id");
+  localStorage.removeItem("user_name");
+  localStorage.removeItem("user_email");
+
+  await retryPendingProHeatLogouts();
+
+  location.reload();
+}
+
+function showLoggedLayout(){
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("userBox").classList.remove("hidden");
+  document.getElementById("paymentBox").classList.add("hidden");
+  document.getElementById("transferBox").classList.add("hidden");
+}
+
+function showPaymentSection(){
+  document.getElementById("paymentBox").classList.remove("hidden");
+  document.getElementById("transferBox").classList.remove("hidden");
+  initPayPal();
+  setTimeout(() => document.getElementById("paymentBox").scrollIntoView({behavior:"smooth", block:"start"}), 100);
+}
+
+async function register(){
+  const name = document.getElementById("nameReg").value.trim();
+  const email = document.getElementById("emailReg").value.trim();
+  const password = document.getElementById("passReg").value.trim();
+  const username = document.getElementById("phUsernameReg").value.trim();
+  const countrySelect = document.getElementById("phCountryReg");
+  const country = countrySelect.options[countrySelect.selectedIndex].text;
+  const phoneCode = countrySelect.value;
+  const phoneDigits = document.getElementById("phPhoneReg").value.replace(/\D/g, "");
+  const phone = phoneCode + phoneDigits;
+  const birth_date = document.getElementById("phBirthReg").value || null;
+  if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(username)) {
+    setMsg("loginMessage", "Usuario: entre 3 y 30 caracteres, letras, números, punto, guion o guion bajo.", "error");
+    return;
+  }
+  if (phone.replace(/\D/g, "").length < 8 || phone.replace(/\D/g, "").length > 15) {
+    setMsg("loginMessage", "Escribe un teléfono válido con clave internacional.", "error");
+    return;
+  }
+  if (password.length < 8) {
+    setMsg("loginMessage", "La contraseña debe tener al menos 8 caracteres.", "error");
+    return;
+  }
+
+
+  if(!name || !email || !password){
+    setMsg("loginMessage","Completa nombre, correo y contraseña.","error");
+    return;
+  }
+
+  try{
+    setMsg("loginMessage","Creando cuenta...","warning");
+
+    const res = await fetch(API+"/register",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({name,email,password,username,phone,country,birth_date})
+    });
+
+    const data = await res.json();
+
+    if(!res.ok){
+      setMsg("loginMessage",data.detail || "Error al crear cuenta","error");
+      return;
+    }
+
+    setMsg("loginMessage","Cuenta creada ✔ iniciando sesión...","success");
+
+    const loginRes = await fetch(API+"/login",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({email,password})
+    });
+
+    const loginData = await loginRes.json();
+
+    if(loginRes.ok){
+      saveSession(loginData);
+      const checkoutMode = new URLSearchParams(window.location.search).get("checkout") === "1";
+      window.location.href = checkoutMode ? "/premium?checkout=1" : "/";
+      return;
+    }
+
+    window.location.href = "/";
+  }catch(e){
+    setMsg("loginMessage","Error de conexión al crear cuenta.","error");
+  }
+}
+
+async function login(){
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  if(!email || !password){
+    setMsg("loginMessage","Ingresa correo y contraseña.","error");
+    return;
+  }
+
+  const res = await fetch(API+"/login",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({email,password})
+  });
+
+  const data = await res.json();
+
+  if(!res.ok){
+    setMsg("loginMessage",data.detail || "Error al iniciar sesión","error");
+    return;
+  }
+
+  saveSession(data);
+  showLoggedLayout();
+
+  document.getElementById("userInfo").innerText = "Usuario: " + (data.name || "Usuario");
+
+  await loadMembership(data.user_id);
+}
+
+async function loadMembership(user_id){
+  if(!user_id){
+    document.getElementById("membershipStatus").innerText = "Estado: sesión no identificada";
+    return;
+  }
+
+  const res = await fetch(API+"/membership/"+user_id);
+  const data = await res.json();
+
+  const status = data.membership || "pending";
+  const pillClass = status === "active" ? "status-active" : status === "expired" ? "status-expired" : "status-pending";
+
+  document.getElementById("membershipStatus").innerHTML =
+    "Estado de membresía: <span class='status-pill "+pillClass+"'>" + status + "</span>";
+
+  if(status === "active"){
+    document.getElementById("premiumActiveBox").classList.remove("hidden");
+    document.getElementById("freeSessionBox").classList.add("hidden");
+    showPremiumContent();
+  }else{
+    document.getElementById("freeSessionBox").classList.remove("hidden");
+    document.getElementById("premiumActiveBox").classList.add("hidden");
+    hidePremiumContent();
+  }
+}
+
+function showPremiumContent(){
+  document.getElementById("premiumContentBox").classList.remove("hidden");
+  document.getElementById("paymentBox").classList.add("hidden");
+  document.getElementById("transferBox").classList.add("hidden");
+  renderPremiumTabs();
+  loadPremiumSection(activePremiumTab);
+}
+
+function hidePremiumContent(){
+  document.getElementById("premiumContentBox").classList.add("hidden");
+}
+
+function renderPremiumTabs(){
+  const tabs = document.getElementById("premiumTabs");
+  tabs.innerHTML = premiumSections.map(section => `
+    <button class="premium-tab-btn ${section.key === activePremiumTab ? "active" : ""}" onclick="selectPremiumTab('${section.key}')">
+      ${section.label}
+    </button>
+  `).join("");
+}
+
+function selectPremiumTab(key){
+  activePremiumTab = key;
+  renderPremiumTabs();
+  loadPremiumSection(key);
+}
+
+function formatHeader(key){
+  return String(key || "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function getTitleField(item){
+  return item.partido || item.Partido || item.match || item.titulo || item.title || "Registro";
+}
+
+function renderPremiumTable(items, sectionLabel){
+  const container = document.getElementById("premiumTableContainer");
+
+  if(!items || !items.length){
+    container.innerHTML = `<div class="premium-empty">No hay datos disponibles para ${sectionLabel}.</div>`;
+    return;
+  }
+
+  const preferredOrder = [
+    "hora", "Hora", "liga", "Liga", "sem", "Sem", "partido", "Partido",
+    "ml", "ML", "ml_prob", "ML Prob", "goles_local", "Goles Local",
+    "goles_visitante", "Goles Visitante", "marcador_global", "Marcador Global",
+    "mitades", "Mitades", "sot", "SoT", "corners", "Corners", "tarjetas", "Tarjetas",
+    "pick", "Pick", "probabilidad", "Probabilidad", "stake", "Stake", "notas", "Notas"
+  ];
+
+  const allKeys = Array.from(new Set(items.flatMap(item => Object.keys(item || {}))));
+  const orderedKeys = [
+    ...preferredOrder.filter(k => allKeys.includes(k)),
+    ...allKeys.filter(k => !preferredOrder.includes(k))
+  ];
+
+  const rows = items.map(item => {
+    return `<tr>${orderedKeys.map(key => `<td>${escapeHtml(item[key] ?? "")}</td>`).join("")}</tr>`;
+  }).join("");
+
+  container.innerHTML = `
+    <table class="premium-table">
+      <thead>
+        <tr>${orderedKeys.map(key => `<th>${formatHeader(key)}</th>`).join("")}</tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+async function loadPremiumSection(key){
+  const section = premiumSections.find(s => s.key === key) || premiumSections[0];
+  const container = document.getElementById("premiumTableContainer");
+  container.innerHTML = `<div class="premium-empty">Cargando ${section.label}...</div>`;
+
+  try{
+    if(!premiumCache[section.key]){
+      const res = await fetch(API + section.endpoint);
+      const data = await res.json();
+      premiumCache[section.key] = Array.isArray(data.items) ? data.items : [];
+    }
+
+    renderPremiumTable(premiumCache[section.key], section.label);
+  }catch(e){
+    container.innerHTML = `<div class="premium-empty">Error cargando ${section.label}.</div>`;
+  }
+}
+
+function initPayPal(){
+  if(paypalRendered) return;
+  paypalRendered = true;
+
+  paypal.Buttons({
+
+    createOrder: async function(){
+      const res = await fetch(API+"/paypal/create-order",{
+        method:"POST",
+        headers:{ "Authorization":"Bearer "+getToken() }
+      });
+
+      const data = await res.json();
+
+      if(!res.ok){
+        setMsg("paypalMessage",data.detail || "Error al crear orden PayPal","error");
+        throw new Error();
+      }
+
+      return data.id;
+    },
+
+    onApprove: async function(data){
+      const res = await fetch(API+"/paypal/capture-order/"+data.orderID,{
+        method:"POST",
+        headers:{ "Authorization":"Bearer "+getToken() }
+      });
+
+      const result = await res.json();
+
+      if(res.ok){
+        setMsg("paypalMessage","Pago exitoso ✔ Membresía activada.","success");
+        setTimeout(()=>location.reload(),1500);
+      }else{
+        setMsg("paypalMessage",result.detail || "Error al capturar pago","error");
+      }
+    },
+
+    onError: function(err){
+      console.error(err);
+      setMsg("paypalMessage","Error PayPal","error");
+    }
+
+  }).render("#paypal-button-container");
+}
+
+function toggleClabe(){
+  clabeVisible = !clabeVisible;
+  document.getElementById("clabeDisplay").innerText = clabeVisible ? CLABE : "••••••••••••••9849";
+  document.getElementById("toggleClabeBtn").innerText = clabeVisible ? "Ocultar CLABE" : "Mostrar CLABE";
+}
+
+async function copyClabe(){
+  try{
+    await navigator.clipboard.writeText(CLABE);
+    setMsg("clabeMessage","CLABE copiada al portapapeles ✔","success");
+  }catch(e){
+    const temp = document.createElement("input");
+    temp.value = CLABE;
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand("copy");
+    temp.remove();
+    setMsg("clabeMessage","CLABE copiada al portapapeles ✔","success");
+  }
+}
+
+async function uploadProof(){
+  const userId = getUserId();
+  const file = document.getElementById("proofFile").files[0];
+
+  if(!userId){
+    setMsg("proofMessage","Inicia sesión antes de subir el comprobante.","error");
+    return;
+  }
+
+  if(!file){
+    setMsg("proofMessage","Selecciona una imagen o PDF del comprobante.","error");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try{
+    setMsg("proofMessage","Subiendo comprobante...","warning");
+
+    const res = await fetch(API+"/upload-proof/"+userId,{
+      method:"POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if(res.ok){
+      setMsg("proofMessage",data.message || "Comprobante enviado correctamente.","success");
+      document.getElementById("proofFile").value = "";
+    }else{
+      setMsg("proofMessage",data.detail || "Error al subir comprobante.","error");
+    }
+  }catch(e){
+    setMsg("proofMessage","Error de conexión al subir comprobante.","error");
+  }
+}
+
+(async function(){
+  const token = getToken();
+  const userId = getUserId();
+  const checkoutMode = new URLSearchParams(window.location.search).get("checkout") === "1";
+  const userName = localStorage.getItem("user_name") || "Usuario";
+
+  // Si viene desde el botón "Actualizar a Premium" y ya hay sesión,
+  // mostramos directamente las opciones de pago.
+  if(token && checkoutMode){
+    showLoggedLayout();
+    document.getElementById("userInfo").innerText = "Usuario: " + userName;
+    await loadMembership(userId);
+
+    document.getElementById("premiumContentBox").classList.add("hidden");
+    document.getElementById("freeSessionBox").classList.remove("hidden");
+    document.getElementById("premiumActiveBox").classList.add("hidden");
+
+    showPaymentSection();
+    return;
+  }
+
+  // Si ya hay sesión y no viene a pagar, regresamos al Home.
+  if(token){
+    window.location.href = "/";
+  }
+})();
+
+void retryPendingProHeatLogouts();
+</script>
+
+<!-- PROHEAT_QUINIELAS_FORM_213 -->
+<style>
+.ph-q-field{display:block;margin:10px 0;width:100%;box-sizing:border-box}
+.ph-q-field label{display:block;margin:0 0 6px;font-weight:600;color:#f5f5f5}
+.ph-q-field input,.ph-q-field select{width:100%;min-height:43px;padding:10px;border:1px solid #555;border-radius:9px;background:#292f3a;color:white;box-sizing:border-box;font:inherit}
+.ph-q-grid{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+@media(max-width:600px){.ph-q-grid{grid-template-columns:1fr}}
+.ph-q-note{color:#aaa;font-size:12px;margin:4px 0 10px}
+</style>
+<script>
+(function(){
+ function mountQuinielasRegistration(){
+   const name=document.getElementById('nameReg');
+   if(!name || document.getElementById('phUsernameReg')) return;
+   const wrapper=document.createElement('div');
+   wrapper.id='phQuinielasFields';
+   wrapper.innerHTML=`
+     <div class="ph-q-field"><label for="phUsernameReg">Nombre de usuario *</label><input id="phUsernameReg" name="username" autocomplete="username" minlength="3" maxlength="30" required placeholder="Tu usuario en ProHeat y Quinielas"></div>
+     <div class="ph-q-grid"><div class="ph-q-field"><label for="phCountryReg">País y clave *</label><select id="phCountryReg" required>
+       <option value="+52">México (+52)</option><option value="+1">Estados Unidos (+1)</option><option value="+1">Canadá (+1)</option><option value="+57">Colombia (+57)</option><option value="+54">Argentina (+54)</option><option value="+56">Chile (+56)</option><option value="+51">Perú (+51)</option><option value="+34">España (+34)</option><option value="+55">Brasil (+55)</option><option value="+593">Ecuador (+593)</option><option value="+502">Guatemala (+502)</option><option value="+506">Costa Rica (+506)</option><option value="+507">Panamá (+507)</option><option value="+598">Uruguay (+598)</option><option value="+58">Venezuela (+58)</option>
+     </select></div><div class="ph-q-field"><label for="phPhoneReg">Teléfono / WhatsApp *</label><input id="phPhoneReg" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" required placeholder="10 dígitos en México"></div></div>
+     <div class="ph-q-field"><label for="phBirthReg">Fecha de nacimiento (opcional)</label><input id="phBirthReg" type="date" autocomplete="bday"></div>
+     <p class="ph-q-note">Una cuenta para ProHeat Sports y Quinielas. Tu teléfono debe ser real y único.</p>`;
+   name.insertAdjacentElement('afterend',wrapper);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountQuinielasRegistration);
+ else mountQuinielasRegistration();
+})();
+</script>
+<script>
+function togglePasswordVisibility213() {
+    const input = document.querySelector('input[type="password"], input[data-password-visible="true"]');
+    const boton = document.getElementById("togglePassword213");
+    if (!input || !boton) return;
+
+    const visible = input.type === "password";
+    input.type = visible ? "text" : "password";
+    input.dataset.passwordVisible = "true";
+    boton.textContent = visible ? "🙈 Ocultar contraseña" : "👁 Mostrar contraseña";
+}
+</script>
+</body>
+</html>

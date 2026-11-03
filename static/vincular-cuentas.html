@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vincular cuentas | ProHeat Sports</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(145deg, #111, #292929);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: #191919;
+    border: 1px solid #454545;
+    border-radius: 18px;
+    padding: 32px;
+    box-shadow: 0 15px 45px rgba(0,0,0,.4);
+  }
+
+  h1 {
+    margin: 0 0 12px;
+    color: #ff7900;
+    font-size: 27px;
+  }
+
+  p {
+    line-height: 1.6;
+    color: #ddd;
+  }
+
+  label {
+    display: block;
+    margin: 20px 0 8px;
+    font-weight: bold;
+  }
+
+  input {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #666;
+    background: #292929;
+    color: #fff;
+    font-size: 16px;
+  }
+
+  button {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 24px;
+    background: #ff7900;
+    border: 0;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    opacity: .6;
+    cursor: wait;
+  }
+
+  .message {
+    margin-top: 18px;
+    line-height: 1.5;
+  }
+
+  .error { color: #ff8888; }
+  .success { color: #7ce8a3; }
+
+  a { color: #ffad55; }
+
+  .footer {
+    margin-top: 24px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<main class="card">
+  <h1>ProHeat Sports</h1>
+  <h2>Vincular cuentas</h2>
+
+  <p>
+    Conecta tu cuenta existente de ProHeat Sports con
+    ProHeat Quinielas para acceder a ambos servicios.
+  </p>
+
+  <form id="linkForm">
+    <label for="email">Correo de ProHeat Sports</label>
+    <input
+      id="email"
+      type="email"
+      autocomplete="email"
+      required
+    >
+
+    <label for="password">Contrase?a de ProHeat Sports</label>
+    <input
+      id="password"
+      type="password"
+      autocomplete="current-password"
+      required
+    >
+
+    <button id="submitButton" type="submit">
+      Vincular mis cuentas
+    </button>
+  </form>
+
+  <div id="message" class="message" role="status" aria-live="polite"></div>
+
+  <div class="footer">
+    <a href="/quinielas/">Volver a Quinielas</a>
+  </div>
+</main>
+
+<script>
+const API = window.location.origin;
+
+const form = document.getElementById("linkForm");
+const message = document.getElementById("message");
+const button = document.getElementById("submitButton");
+
+function showMessage(text, type = "") {
+  message.textContent = text;
+  message.className = "message " + type;
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const centralToken = localStorage.getItem(
+    "proheat_quinielas_token"
+  );
+
+  if (!centralToken) {
+    showMessage(
+      "Primero inicia sesion en ProHeat Quinielas.",
+      "error"
+    );
+    return;
+  }
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  button.disabled = true;
+
+  try {
+    showMessage("Verificando cuentas...");
+
+    const response = await fetch(API + "/auth/link-existing", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + centralToken
+      },
+      body: JSON.stringify({email, password})
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error(
+          "Demasiados intentos. Intenta nuevamente mas tarde."
+        );
+      }
+
+      if (response.status === 401) {
+        throw new Error(
+          "Tu sesion de Quinielas no es valida. Inicia sesion nuevamente."
+        );
+      }
+
+      throw new Error(
+        "No fue posible vincular las cuentas. Verifica tus datos."
+      );
+    }
+
+    showMessage("Cuentas vinculadas. Iniciando sesion...", "success");
+
+    const loginResponse = await fetch(API + "/auth/central", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + centralToken
+      }
+    });
+
+    if (!loginResponse.ok) {
+      throw new Error(
+        "Las cuentas se vincularon, pero no fue posible iniciar sesion. Intenta acceder nuevamente."
+      );
+    }
+
+    const data = await loginResponse.json();
+
+    if (!data.token || !data.user_id) {
+      throw new Error(
+        "La respuesta de autenticacion esta incompleta."
+      );
+    }
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user_id", data.user_id);
+    localStorage.setItem("user_name", data.name || "");
+    localStorage.setItem("user_email", data.email || "");
+    localStorage.removeItem("proheat_manual_logout");
+
+    document.getElementById("password").value = "";
+
+    showMessage(
+      "Vinculacion completada. Redirigiendo...",
+      "success"
+    );
+
+    window.location.assign("/");
+
+  } catch (error) {
+    showMessage(error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>

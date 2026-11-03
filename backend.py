@@ -1,8 +1,12 @@
 from __future__ import annotations
+from datetime import date
+from password_recovery_store import create_recovery_tables, create_recovery_ip_table, create_reset_attempts_table
+from password_recovery_routes import register_recovery_routes
 
 import os
 import json
 import sqlite3
+from identity_schema import create_identity_links_table, create_identity_link_attempts_table
 import secrets
 import hashlib
 import base64
@@ -132,7 +136,12 @@ def normalize_membership_status(end_date: Optional[str]) -> str:
     dt = parse_dt(end_date)
     if not dt:
         return "pending"
-    return "active" if dt > now_utc() else "expired"
+    from datetime import timezone
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    return "active" if dt.astimezone(timezone.utc) > now_utc().astimezone(timezone.utc) else "expired"
 
 def ensure_dirs() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -297,6 +306,12 @@ def init_db() -> None:
     )
     """)
 
+    create_identity_links_table(conn)
+    create_identity_link_attempts_table(conn)
+    create_recovery_tables(conn)
+    create_recovery_ip_table(conn)
+    create_reset_attempts_table(conn)
+
     conn.commit()
     conn.close()
 
@@ -343,12 +358,25 @@ def boot() -> None:
 
 boot()
 
+# Rutas de recuperacion de contrasenas
+register_recovery_routes(app, db_connect)
+
 # =========================
 # SCHEMAS
 # =========================
 
 class RegisterIn(BaseModel):
     name: str
+    email: EmailStr
+    password: str
+    username: str
+    phone: str
+    country: str
+    birth_date: Optional[date] = None
+
+
+
+class LinkExistingAccountIn(BaseModel):
     email: EmailStr
     password: str
 
@@ -559,7 +587,12 @@ def normalize_telegram_membership_status(end_date: Optional[str], status: str = 
     dt = parse_dt(end_date)
     if not dt:
         return "inactive"
-    return "active" if dt > now_utc() else "expired"
+    from datetime import timezone
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    return "active" if dt.astimezone(timezone.utc) > now_utc().astimezone(timezone.utc) else "expired"
 
 def activate_telegram_membership(
     telegram_id: str,
@@ -978,47 +1011,291 @@ def admin_page():
 # PUBLIC / USER AUTH
 # =========================
 
+# PROHEAT_REGISTRO_UNIFICADO_213
 @app.post("/register")
 def register_user(payload: RegisterIn):
-    conn = db_connect()
-    cur = conn.cursor()
+    """Quinielas es la entrada unica de registro; ella crea la cuenta central."""
+    import json
+    import os
+    import secrets
+    import urllib.error
+    import urllib.request
 
-    cur.execute("SELECT 1 FROM users WHERE email = ?", (payload.email.lower(),))
-    if cur.fetchone():
-        conn.close()
-        raise HTTPException(status_code=400, detail="Ese correo ya está registrado.")
+    quinielas_url = os.getenv("PROHEAT_QUINIELAS_API_URL", "").strip().rstrip("/")
+    if not quinielas_url:
+        raise HTTPException(status_code=503, detail="Registro unificado sin configurar.")
 
-    user_id = f"user_{secrets.token_hex(6)}"
-    password_hash, password_salt = hash_password(payload.password)
-    now_str = iso_now()
-
-    cur.execute("""
-    INSERT INTO users (
-        user_id, name, email, password_hash, password_salt,
-        role, status, membership_start, membership_end, created_at, updated_at
+    operation_id = "phreg_" + secrets.token_hex(16)
+    data = {
+        "operation_id": operation_id,
+        "full_name": payload.name.strip(),
+        "username": payload.username.strip(),
+        "email": str(payload.email).strip().lower(),
+        "phone": payload.phone.strip(),
+        "country": payload.country.strip(),
+        "password": payload.password,
+        "birth_date": payload.birth_date.isoformat() if payload.birth_date else None,
+    }
+    request = urllib.request.Request(
+        quinielas_url + "/auth/register",
+        data=json.dumps(data).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        user_id,
-        payload.name.strip(),
-        payload.email.lower(),
-        password_hash,
-        password_salt,
-        "user",
-        "active",
-        None,
-        None,
-        now_str,
-        now_str
-    ))
+    try:
+        with urllib.request.urlopen(request, timeout=25) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = json.loads(exc.read().decode("utf-8")).get("detail", "Registro rechazado.")
+        except Exception:
+            detail = "Registro rechazado."
+        # No exponer errores internos ni credenciales.
+        raise HTTPException(status_code=exc.code if exc.code in (400, 409, 422) else 503, detail=detail)
+    except (urllib.error.URLError, TimeoutError):
+        raise HTTPException(status_code=503, detail="Quinielas no esta disponible; no se creo la cuenta.")
 
-    conn.commit()
-    conn.close()
+    # La cuenta central la crea Quinielas usando /auth/internal/register-user.
+    # No se inserta nuevamente aqui.
+    return {
+        "message": "Cuenta creada en ProHeat Sports y Quinielas.",
+        "quinielas_user_id": result.get("user", {}).get("id"),
+    }
+
+
+@app.post("/auth/logout")
+def logout_authenticated_user(
+    authorization: Optional[str] = Header(None)
+):
+    token = get_token_from_header(authorization)
+
+    conn = db_connect()
+
+    try:
+        cur = conn.cursor()
+
+        cur.execute(
+            "DELETE FROM sessions WHERE token = ?",
+            (token,)
+        )
+
+        conn.commit()
+
+    finally:
+        conn.close()
 
     return {
-        "message": "Cuenta creada correctamente.",
-        "user_id": user_id
+        "message": "Sesion cerrada correctamente."
     }
+
+
+
+# ============================================================
+# AUTENTICACION CENTRAL - VALIDACION ENTRE BACKENDS
+# ============================================================
+
+class InternalSessionValidationIn(BaseModel):
+    token: str
+
+
+class InternalRegisterUserIn(BaseModel):
+    operation_id: str
+    name: str
+    email: EmailStr
+    password: str
+
+
+@app.post("/auth/internal/register-user")
+def register_internal_user(
+    payload: InternalRegisterUserIn,
+    x_proheat_service_key: Optional[str] = Header(None),
+):
+    import re
+    from registration_operations import (
+        create_registration_operations_table,
+        find_registration_operation,
+    )
+
+    from central_identity import validate_service_key
+
+    validate_service_key(x_proheat_service_key)
+
+    if not re.fullmatch(r"phreg_[a-f0-9]{32}", payload.operation_id):
+        raise HTTPException(400, "Identificador de operacion invalido.")
+
+    name = payload.name.strip()
+    email = payload.email.lower().strip()
+
+    if not name or not payload.password:
+        raise HTTPException(400, "Nombre y contrasena obligatorios.")
+
+    conn = db_connect()
+
+    try:
+        cur = conn.cursor()
+
+        # Bloqueo de escritura para evitar altas simultaneas duplicadas.
+        conn.execute("BEGIN IMMEDIATE")
+
+        create_registration_operations_table(conn)
+
+        previous = find_registration_operation(
+            conn,
+            payload.operation_id,
+        )
+
+        if previous:
+            previous_user_id = previous[0]
+            previous_email = previous[1]
+
+            cur.execute(
+                """
+                SELECT name, password_hash, password_salt, status
+                FROM users
+                WHERE user_id = ?
+                """,
+                (previous_user_id,),
+            )
+
+            existing = cur.fetchone()
+
+            if (
+                previous_email != email
+                or existing is None
+                or existing[0] != name
+                or existing[3] != "active"
+                or not verify_password(
+                    payload.password,
+                    existing[1],
+                    existing[2],
+                )
+            ):
+                raise HTTPException(
+                    409,
+                    "La operacion ya existe con datos diferentes.",
+                )
+
+            conn.commit()
+
+            return {
+                "created": True,
+                "recovered": True,
+                "user_id": previous_user_id,
+                "email": email,
+                "name": name,
+            }
+
+        cur.execute(
+            "SELECT 1 FROM users WHERE email = ?",
+            (email,),
+        )
+
+        if cur.fetchone():
+            raise HTTPException(
+                409,
+                "El correo ya esta registrado en ProHeat Sports.",
+            )
+
+        user_id = f"user_{secrets.token_hex(6)}"
+        password_hash, password_salt = hash_password(payload.password)
+        now_str = iso_now()
+
+        cur.execute(
+            """
+            INSERT INTO users (
+                user_id, name, email, password_hash, password_salt,
+                role, status, membership_start, membership_end,
+                created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id, name, email, password_hash, password_salt,
+                "user", "active", None, None, now_str, now_str,
+            ),
+        )
+
+        cur.execute(
+            """
+            INSERT INTO registration_operations (
+                operation_id, user_id, email, created_at
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (payload.operation_id, user_id, email, now_str),
+        )
+
+        conn.commit()
+
+        return {
+            "created": True,
+            "recovered": False,
+            "user_id": user_id,
+            "email": email,
+            "name": name,
+        }
+
+    except HTTPException:
+        conn.rollback()
+        raise
+
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        raise HTTPException(
+            409,
+            "No fue posible completar el registro.",
+        )
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
+
+@app.post("/auth/internal/validate-session")
+def validate_internal_session(
+    payload: InternalSessionValidationIn,
+    x_proheat_service_key: Optional[str] = Header(None),
+):
+    from central_identity import validate_service_key
+
+    validate_service_key(x_proheat_service_key)
+
+    user = get_session_user_by_token(payload.token)
+
+    if user.get("status") != "active":
+        raise HTTPException(
+            status_code=403,
+            detail="Cuenta no activa.",
+        )
+
+    return {
+        "valid": True,
+        "user_id": user["user_id"],
+        "name": user["name"],
+        "email": user["email"],
+    }
+
+
+@app.get("/auth/me")
+def get_authenticated_user(
+    authorization: Optional[str] = Header(None)
+):
+    token = get_token_from_header(authorization)
+    user = get_session_user_by_token(token)
+
+    return {
+        "user_id": user["user_id"],
+        "name": user["name"],
+        "email": user["email"],
+        "role": user["role"],
+        "status": normalize_membership_status(
+            user["membership_end"]
+        )
+    }
+
 
 @app.post("/login")
 def login_user(payload: LoginIn):
@@ -1063,6 +1340,119 @@ def login_user(payload: LoginIn):
         "role": user["role"],
         "status": membership_status
     }
+
+
+
+
+@app.post("/auth/link-existing")
+def link_existing_account(
+    payload: LinkExistingAccountIn,
+    authorization: Optional[str] = Header(None),
+):
+    from central_auth_client import (
+        CentralAuthError,
+        validate_quinielas_token,
+    )
+    from identity_integration import link_existing_accounts
+
+    central_token = get_token_from_header(authorization)
+
+    try:
+        central_user = validate_quinielas_token(central_token)
+    except CentralAuthError:
+        raise HTTPException(
+            status_code=401,
+            detail="No fue posible validar la sesion de Quinielas."
+        )
+
+    conn = db_connect()
+
+    try:
+        try:
+            resultado = link_existing_accounts(
+                conn,
+                central_user,
+                str(payload.email),
+                payload.password,
+            )
+        except ValueError as exc:
+            if "Demasiados intentos" in str(exc):
+                raise HTTPException(
+                    status_code=429,
+                    detail="Demasiados intentos. Intenta nuevamente mas tarde."
+                )
+
+            raise HTTPException(
+                status_code=400,
+                detail="No fue posible vincular las cuentas. Verifica los datos."
+            )
+
+        return {
+            "message": "Cuentas vinculadas correctamente.",
+            "linked": resultado["linked"],
+            "proheat_user_id": resultado["proheat_user_id"],
+            "quinielas_user_id": resultado["quinielas_user_id"],
+        }
+
+    finally:
+        conn.close()
+
+@app.post("/auth/central")
+def login_central(authorization: Optional[str] = Header(None)):
+    """
+    Inicia una sesion local para una cuenta previamente
+    vinculada y autenticada mediante Quinielas.
+    """
+    from central_auth_client import CentralAuthError
+    from identity_integration import authenticate_linked_user
+
+    central_token = get_token_from_header(authorization)
+
+    conn = db_connect()
+
+    try:
+        try:
+            resultado = authenticate_linked_user(conn, central_token)
+        except CentralAuthError:
+            raise HTTPException(
+                status_code=401,
+                detail="No fue posible autenticar la cuenta vinculada."
+            )
+
+        user = resultado["proheat_user"]
+
+        if user.get("role") not in {"user", "subadmin", "superadmin"}:
+            raise HTTPException(
+                status_code=403,
+                detail="Cuenta local no autorizada."
+            )
+
+        token = create_token()
+        created_at = iso_now()
+        expires_at = (now_utc() + timedelta(days=30)).isoformat()
+
+        conn.execute("""
+            INSERT INTO sessions (token, user_id, created_at, expires_at)
+            VALUES (?, ?, ?, ?)
+        """, (token, user["user_id"], created_at, expires_at))
+
+        conn.commit()
+
+        return {
+            "message": "Autenticacion central correcta.",
+            "token": token,
+            "user_id": user["user_id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "status": normalize_membership_status(
+                user["membership_end"]
+            )
+        }
+
+    finally:
+        conn.close()
+
 
 @app.get("/membership/{user_id}")
 def get_membership(user_id: str):
@@ -3766,3 +4156,9 @@ def health():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend:app", host="0.0.0.0", port=8000, reload=True)
+
+@app.get("/registro", include_in_schema=False)
+def registro_gratuito_213():
+    from fastapi.responses import FileResponse
+    from pathlib import Path
+    return FileResponse(Path(__file__).resolve().parent / "static" / "registro.html")

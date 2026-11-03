@@ -260,6 +260,11 @@ input[type="file"]{
 <input type="text" id="nameReg" placeholder="Nombre">
 <input type="email" id="emailReg" placeholder="Correo">
 <input type="password" id="passReg" placeholder="Contraseña">
+<button type="button" id="togglePassword213"
+onclick="togglePasswordVisibility213()"
+style="margin-top:8px;padding:8px 14px;cursor:pointer;border:1px solid #d18400;border-radius:8px;background:#222;color:white;">
+👁 Mostrar contraseña
+</button>
 
 <button class="btn" onclick="register()">Crear cuenta</button>
 
@@ -372,6 +377,8 @@ function clearMsg(id){
 }
 
 function saveSession(data){
+  // Un inicio de sesion explicito permite volver a conectar ProHeat.
+  localStorage.removeItem("proheat_manual_logout");
   localStorage.setItem("token", data.token);
   localStorage.setItem("user_id", data.user_id);
   localStorage.setItem("user_name", data.name || "");
@@ -382,11 +389,101 @@ function saveSession(data){
 function getToken(){ return localStorage.getItem("token"); }
 function getUserId(){ return localStorage.getItem("user_id") || currentUserId; }
 
-function logout(){
+    const PROHEAT_PENDING_LOGOUTS_KEY = "proheat_pending_logouts";
+
+    function getPendingProHeatLogouts() {
+      try {
+        const value = JSON.parse(
+          localStorage.getItem(PROHEAT_PENDING_LOGOUTS_KEY) || "[]"
+        );
+        return Array.isArray(value)
+          ? value.filter(token => typeof token === "string" && token)
+          : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function savePendingProHeatLogouts(tokens) {
+      const unique = [...new Set(tokens)];
+
+      if (unique.length) {
+        localStorage.setItem(
+          PROHEAT_PENDING_LOGOUTS_KEY,
+          JSON.stringify(unique)
+        );
+      } else {
+        localStorage.removeItem(PROHEAT_PENDING_LOGOUTS_KEY);
+      }
+    }
+
+    function queueProHeatLogout(token) {
+      if (!token) return;
+
+      savePendingProHeatLogouts([
+        ...getPendingProHeatLogouts(),
+        token
+      ]);
+    }
+
+    let proheatLogoutRetryPromise = null;
+
+    function retryPendingProHeatLogouts() {
+      if (proheatLogoutRetryPromise) {
+        return proheatLogoutRetryPromise;
+      }
+
+      proheatLogoutRetryPromise = (async () => {
+        const processPendingProHeatLogouts = async () => {
+      const pending = getPendingProHeatLogouts();
+
+      for (const token of pending) {
+        try {
+          const response = await fetch("/auth/logout", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            savePendingProHeatLogouts(
+              getPendingProHeatLogouts().filter(
+                pendingToken => pendingToken !== token
+              )
+            );
+          }
+        } catch (error) {
+          console.warn("Revocacion ProHeat pendiente de conexion.");
+        }
+      }
+    }
+        await processPendingProHeatLogouts();
+      })().finally(() => {
+        proheatLogoutRetryPromise = null;
+      });
+
+      return proheatLogoutRetryPromise;
+    }
+
+async function logout(){
+  const token = localStorage.getItem("token");
+
+  // Respetar el cierre manual en todo ProHeat Sports.
+  localStorage.setItem("proheat_manual_logout", "1");
+
+  // Registrar la revocacion antes de borrar el token local.
+  if (token) {
+    queueProHeatLogout(token);
+  }
+
   localStorage.removeItem("token");
   localStorage.removeItem("user_id");
   localStorage.removeItem("user_name");
   localStorage.removeItem("user_email");
+
+  await retryPendingProHeatLogouts();
+
   location.reload();
 }
 
@@ -408,6 +505,26 @@ async function register(){
   const name = document.getElementById("nameReg").value.trim();
   const email = document.getElementById("emailReg").value.trim();
   const password = document.getElementById("passReg").value.trim();
+  const username = document.getElementById("phUsernameReg").value.trim();
+  const countrySelect = document.getElementById("phCountryReg");
+  const country = countrySelect.options[countrySelect.selectedIndex].text;
+  const phoneCode = countrySelect.value;
+  const phoneDigits = document.getElementById("phPhoneReg").value.replace(/\D/g, "");
+  const phone = phoneCode + phoneDigits;
+  const birth_date = document.getElementById("phBirthReg").value || null;
+  if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(username)) {
+    setMsg("loginMessage", "Usuario: entre 3 y 30 caracteres, letras, números, punto, guion o guion bajo.", "error");
+    return;
+  }
+  if (phone.replace(/\D/g, "").length < 8 || phone.replace(/\D/g, "").length > 15) {
+    setMsg("loginMessage", "Escribe un teléfono válido con clave internacional.", "error");
+    return;
+  }
+  if (password.length < 8) {
+    setMsg("loginMessage", "La contraseña debe tener al menos 8 caracteres.", "error");
+    return;
+  }
+
 
   if(!name || !email || !password){
     setMsg("loginMessage","Completa nombre, correo y contraseña.","error");
@@ -420,7 +537,7 @@ async function register(){
     const res = await fetch(API+"/register",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({name,email,password})
+      body: JSON.stringify({name,email,password,username,phone,country,birth_date})
     });
 
     const data = await res.json();
@@ -731,7 +848,50 @@ async function uploadProof(){
     window.location.href = "/";
   }
 })();
+
+void retryPendingProHeatLogouts();
 </script>
 
+<!-- PROHEAT_QUINIELAS_FORM_213 -->
+<style>
+.ph-q-field{display:block;margin:10px 0;width:100%;box-sizing:border-box}
+.ph-q-field label{display:block;margin:0 0 6px;font-weight:600;color:#f5f5f5}
+.ph-q-field input,.ph-q-field select{width:100%;min-height:43px;padding:10px;border:1px solid #555;border-radius:9px;background:#292f3a;color:white;box-sizing:border-box;font:inherit}
+.ph-q-grid{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+@media(max-width:600px){.ph-q-grid{grid-template-columns:1fr}}
+.ph-q-note{color:#aaa;font-size:12px;margin:4px 0 10px}
+</style>
+<script>
+(function(){
+ function mountQuinielasRegistration(){
+   const name=document.getElementById('nameReg');
+   if(!name || document.getElementById('phUsernameReg')) return;
+   const wrapper=document.createElement('div');
+   wrapper.id='phQuinielasFields';
+   wrapper.innerHTML=`
+     <div class="ph-q-field"><label for="phUsernameReg">Nombre de usuario *</label><input id="phUsernameReg" name="username" autocomplete="username" minlength="3" maxlength="30" required placeholder="Tu usuario en ProHeat y Quinielas"></div>
+     <div class="ph-q-grid"><div class="ph-q-field"><label for="phCountryReg">País y clave *</label><select id="phCountryReg" required>
+       <option value="+52">México (+52)</option><option value="+1">Estados Unidos (+1)</option><option value="+1">Canadá (+1)</option><option value="+57">Colombia (+57)</option><option value="+54">Argentina (+54)</option><option value="+56">Chile (+56)</option><option value="+51">Perú (+51)</option><option value="+34">España (+34)</option><option value="+55">Brasil (+55)</option><option value="+593">Ecuador (+593)</option><option value="+502">Guatemala (+502)</option><option value="+506">Costa Rica (+506)</option><option value="+507">Panamá (+507)</option><option value="+598">Uruguay (+598)</option><option value="+58">Venezuela (+58)</option>
+     </select></div><div class="ph-q-field"><label for="phPhoneReg">Teléfono / WhatsApp *</label><input id="phPhoneReg" name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" required placeholder="10 dígitos en México"></div></div>
+     <div class="ph-q-field"><label for="phBirthReg">Fecha de nacimiento (opcional)</label><input id="phBirthReg" type="date" autocomplete="bday"></div>
+     <p class="ph-q-note">Una cuenta para ProHeat Sports y Quinielas. Tu teléfono debe ser real y único.</p>`;
+   name.insertAdjacentElement('afterend',wrapper);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountQuinielasRegistration);
+ else mountQuinielasRegistration();
+})();
+</script>
+<script>
+function togglePasswordVisibility213() {
+    const input = document.querySelector('input[type="password"], input[data-password-visible="true"]');
+    const boton = document.getElementById("togglePassword213");
+    if (!input || !boton) return;
+
+    const visible = input.type === "password";
+    input.type = visible ? "text" : "password";
+    input.dataset.passwordVisible = "true";
+    boton.textContent = visible ? "🙈 Ocultar contraseña" : "👁 Mostrar contraseña";
+}
+</script>
 </body>
 </html>
