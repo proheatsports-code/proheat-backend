@@ -974,7 +974,7 @@ def quinielas_home():
             status_code=503,
             detail="El frontend de Quinielas todavía no está instalado en static/quinielas.",
         )
-    return FileResponse(index_path, media_type="text/html")
+    return FileResponse(index_path, media_type="text/html", headers={"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache", "Expires": "0"})
 
 
 @app.get("/quinielas/{resource_path:path}", response_model=None, include_in_schema=False)
