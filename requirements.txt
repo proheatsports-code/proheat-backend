@@ -1,19 +1,8 @@
-Competición              Partido Excel                            Partido API  Goles Local  Goles Visitante              Ganador SoT Corners Tarjetas
-            Ligue 1        Brest vs Strasbourg        Stade Brestois 29 vs Strasbourg            1                2           Strasbourg  11       9        1
-            La Liga       Espanyol vs Athletic              Espanyol vs Athletic Club            2                0             Espanyol   9      17        0
-            La Liga      Villarreal vs Sevilla                  Villarreal vs Sevilla            2                3              Sevilla   9      10        3
-     Premier League Man City vs Crystal Palace      Manchester City vs Crystal Palace            3                0      Manchester City   6      13        2
-            Ligue 1                Lens vs PSG            Lens vs Paris Saint Germain            0                2  Paris Saint Germain  13       9        1
-            La Liga        Alavés vs Barcelona                    Alaves vs Barcelona            1                0               Alaves   3      10        3
-            La Liga         Getafe vs Mallorca                     Getafe vs Mallorca            3                1               Getafe   6       7        7
-     Copa Do Brasil     Juventude vs São Paulo                 Juventude vs Sao Paulo            3                1            Juventude  10       9        4
-     Copa Do Brasil          Vasco vs Paysandu              Vasco DA Gama vs Paysandu            2                2               Empate  12      10        4
-     Copa Do Brasil         Coritiba vs Santos                     Coritiba vs Santos            0                2               Santos   3       6        6
-Major League Soccer  Cincinnati vs Inter Miami           FC Cincinnati vs Inter Miami            3                5          Inter Miami   9       9        5
-Major League Soccer   New England vs Nashville New England Revolution vs Nashville SC            0                3         Nashville SC   6      13        5
-Major League Soccer   NY Red Bulls vs Columbus    New York Red Bulls vs Columbus Crew            3                2   New York Red Bulls  10       5        5
-Major League Soccer    Orlando vs Philadelphia  Orlando City SC vs Philadelphia Union            4                3      Orlando City SC  13      12        4
-     Copa Do Brasil     Mirassol vs Bragantino              Mirassol vs RB Bragantino            2                1             Mirassol   7       6        0
- Copa do Brasil U17  Ceará vs Atlético Mineiro              Ceará vs Atlético Mineiro            2                1                Ceará   6       6        4
-
-
+fastapi
+uvicorn
+pydantic[email]
+python-multipart
+pandas
+openpyxl
+requests
+python-docx==1.1.2
